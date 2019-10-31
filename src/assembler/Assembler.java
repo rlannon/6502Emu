@@ -3,13 +3,12 @@ package assembler;
 import emu_format.*;
 
 import java.io.*;
-import java.rmi.server.ExportException;
 import java.util.Scanner;
 import java.util.Vector;
 import java.util.regex.Pattern;
 import java.util.Hashtable;
 
-class Assembler {
+public class Assembler {
     /*
 
     Implements a single-pass assembler for 6502 asm
@@ -43,6 +42,7 @@ class Assembler {
 
     // Symbols
     private String parentSymbolName;    // the name of the current parent symbol (allows for .sym)
+    private Vector<DebugSymbol> debugSymbols;   // debug symbols for our debugger
     private Hashtable<String, AssemblerSymbol> symbolTable; // the table containing our assembler symbols
     private Vector<RelocationSymbol> relocationTable;   // the table for holding all unresolved symbol references
 
@@ -159,7 +159,22 @@ class Assembler {
         }
     }
 
-    boolean parseFile() throws IOException {
+    public boolean assemble(String filename) throws IOException
+    {
+        // an overloaded version of parseFile that allows us to call the function with a filename
+        // this is for the case where we didn't pass a filename to the constructor
+        try {
+            this.asmIn = new FileReader(filename);
+        } catch (Exception e) {
+            System.out.println(e.toString());
+        }
+
+        return this.assemble();
+    }
+
+    boolean assemble() throws IOException {
+        // parses the ASM file this.asmIn
+
         int lineNumber = 1;
         if (this.asmIn != null)
         {
@@ -167,6 +182,9 @@ class Assembler {
 
             while (asmScan.hasNextLine())
             {
+                // add the current line and its address to our debugSymbols vector
+                this.debugSymbols.add(new DebugSymbol(lineNumber, (short)(this.currentOrigin + this.currentOffset)));
+
                 // get the line
                 String line = asmScan.nextLine();
 
@@ -182,7 +200,7 @@ class Assembler {
                         // check to see if lineData[1] is a symbol name; if so, add it to the relocation table
                         if (lineData.length > 1)
                         {
-                            if (lineData[1].matches("#?.?[a-zA-Z_]+[0-9a-zA-Z_]*"))
+                            if (lineData[1].matches("(?!\\$)(#?\\.?[a-zA-Z_]+[0-9a-zA-Z_]*)"))
                             {
                                 // if we have the address-of-symbol operator (#), skip it
                                 if (lineData[1].charAt(0) == '#')
@@ -210,17 +228,13 @@ class Assembler {
 
                         // get our instruction data, update the offset, and add the bytes to our bytecode buffer
                         byte[] instructionData = InstructionParser.parseInstruction(lineData);
-                        this.currentOffset += instructionData.length;   // increase our offset
                         byte[] bytecode = new byte[this.buffer.length + instructionData.length];
                         System.arraycopy(this.buffer, 0, bytecode, 0, this.buffer.length);
                         System.arraycopy(instructionData, 0, bytecode, this.buffer.length, instructionData.length);
                         this.buffer = bytecode;
 
-                        for (byte datum: instructionData)
-                        {
-                            System.out.print(datum + ", ");
-                        }
-                        System.out.println();
+                        // update the offset
+                        this.currentOffset += instructionData.length;   // increase our offset
                     }
                     // finally, check to see if we have an assembler directive
                     else if (isDirective(lineData[0]))
@@ -295,10 +309,6 @@ class Assembler {
                     }
                 }
                 // skip empty lines, commented lines
-                else
-                {
-                    System.out.println("line " + lineNumber + " is empty!");
-                }
 
                 // increment our line number
                 lineNumber++;
@@ -320,7 +330,7 @@ class Assembler {
             }
 
             // now, create an EmuFile
-            EmuFile emu = new EmuFile(this.banks);
+            EmuFile emu = new EmuFile(this.banks, this.debugSymbols);
             emu.writeEmuFile("assembled.emu");
         }
         else
@@ -331,11 +341,12 @@ class Assembler {
         return true;
     }
 
-    private Assembler()
+    public Assembler()
     {
         // default constructor
         this.asmIn = null;
         this.currentOffset = 0;
+        this.debugSymbols = new Vector<>();
         this.symbolTable = new Hashtable<>();
         this.relocationTable = new Vector<>();
         this.buffer = new byte[]{};
@@ -343,7 +354,7 @@ class Assembler {
         this.banks = new Vector<>();
     }
 
-    Assembler(String filename) {
+    public Assembler(String filename) {
         this();
 
         try {

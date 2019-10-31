@@ -1,8 +1,8 @@
 package emu_format;
 
-import java.io.BufferedOutputStream;
-import java.io.DataOutputStream;
-import java.io.FileOutputStream;
+import assembler.DebugSymbol;
+
+import java.io.*;
 import java.util.Vector;
 
 public class EmuFile {
@@ -31,20 +31,81 @@ public class EmuFile {
      */
 
     Vector<Bank> prgBanks;
+    Vector<DebugSymbol> debugSymbols;
+
+    private final static byte[] MAGIC_NUMBER = { (byte)0xC0, 'E', 'M', 'U' };
+
+    public static EmuFile loadEmuFile(String filename)
+    {
+        // Loads the data in .emu file 'filename' and returns the object
+        EmuFile em = null;
+        DataInputStream in = null;
+
+        try {
+            in = new DataInputStream(new BufferedInputStream(new FileInputStream(filename)));
+            Vector<Bank> fileBanks = new Vector<>();
+            Vector<DebugSymbol> fileDebugSymbols = new Vector<>();
+
+            // load the header
+            byte[] magic_number = in.readNBytes(4);
+            if (java.util.Arrays.equals(magic_number, MAGIC_NUMBER)) {
+                // since the magic number is valid, attempt to read the file
+                int numBanks = in.readByte();   // use int so that 0xFF will be interpreted as 255, not -1 (this will mess up the for loop)
+                int numDebugSymbols = in.readShort();   // again, use int so we can make accurate comparisons
+
+                // read in our bank data
+                for (int i = 0; i < numBanks; i++) {
+                    // fetch the data from the file
+                    short origin = in.readShort();
+                    int numBytes = in.readShort();
+                    byte[] data = in.readNBytes(numBytes);
+
+                    // construct the bank
+                    fileBanks.add(new Bank(origin, data));
+                }
+
+                // read in our debug symbols
+                for (int i = 0; i < numDebugSymbols; i++)
+                {
+                    // fetch the data from the file
+                    int lineNumber = in.readInt();
+                    short address = in.readShort();
+
+                    // construct the symbol and add it to the vector
+                    fileDebugSymbols.add(new DebugSymbol(lineNumber, address));
+                }
+
+                // finally, construct the EmuFile object
+                em = new EmuFile(fileBanks, fileDebugSymbols);
+
+                in.close();
+            } else {
+                throw new Exception("Invalid magic number in .emu file");
+            }
+        }
+        catch (Exception e)
+        {
+            System.out.println("Error loading emu file: " + e.toString());
+        }
+
+        return em;
+    }
 
     public void writeEmuFile(String filename)
     {
+        // Writes the current EmuFile object to file 'filename'
+
         DataOutputStream out = null;
 
         try
         {
             out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(filename)));
             // write the header
-            out.write(new byte[]{ (byte)0xC0, 'E', 'M', 'U' });
-            out.writeByte((byte)0x01);
-            out.writeByte((byte)prgBanks.size());
-            out.writeShort((short)0x00);
+            out.write(MAGIC_NUMBER); // magic number
+            out.writeByte((byte)prgBanks.size());   // number of banks
+            out.writeShort((short)this.debugSymbols.size());    // number of debug symbols
 
+            // write bank data
             for (Bank bank: this.prgBanks)
             {
                 out.writeShort(bank.getOrg());
@@ -56,15 +117,27 @@ public class EmuFile {
                 }
             }
 
+            // write debug symbols -- first line number, then address
+            for (DebugSymbol debugSymbol: this.debugSymbols)
+            {
+                out.writeInt(debugSymbol.getLine());
+                out.writeShort(debugSymbol.getAddress());
+            }
+
             out.close();
         } catch (Exception e) {
             System.out.println(e.toString());
         }
     }
 
-    public void addBank(short org, byte[] data)
+    public Vector<Bank> getPrgBanks()
     {
-        this.prgBanks.add(new Bank(org, data));
+        return this.prgBanks;
+    }
+
+    public Vector<DebugSymbol> getDebugSymbols()
+    {
+        return this.debugSymbols;
     }
 
     public EmuFile() {
@@ -74,5 +147,11 @@ public class EmuFile {
     public EmuFile(Vector<Bank> banks)
     {
         this.prgBanks = banks;
+    }
+
+    public EmuFile(Vector<Bank> banks, Vector<DebugSymbol> debugSymbols)
+    {
+        this(banks);
+        this.debugSymbols = debugSymbols;
     }
 }

@@ -15,7 +15,7 @@ public class Main {
 
             try {
                 Assembler asm = new Assembler(filename);
-                boolean successful = asm.parseFile();
+                boolean successful = asm.assemble();
                 if (successful)
                 {
                     System.out.println("Success!");
@@ -25,7 +25,7 @@ public class Main {
                     System.out.println("Assembly unsuccessful");
                 }
             }
-            catch (java.io.IOException e)
+            catch (Exception e)
             {
                 System.out.println(e.toString());
             }
