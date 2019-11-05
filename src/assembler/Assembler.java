@@ -17,12 +17,12 @@ public class Assembler {
      */
 
     // our assembler directives
-    private final String[] asmDirectives = {
+    private final static String[] asmDirectives = {
             ".org", ".db", ".dw", ".segment"
     };
 
     // some patterns
-    private final Pattern TO_IGNORE = Pattern.compile("[\\s]|(;.*)");
+    private final static Pattern TO_IGNORE = Pattern.compile("[\\s]|(;.*)");
 
     /*
 
@@ -85,8 +85,7 @@ public class Assembler {
         }
     }
 
-    private boolean isDirective(String toCheck)
-    {
+    private boolean isDirective(String toCheck) {
         boolean found = false;
         int idx = 0;
         while (idx < this.asmDirectives.length && !found)
@@ -104,8 +103,7 @@ public class Assembler {
         return found;
     }
 
-    private String[] splitString(String toSplit)
-    {
+    private String[] splitString(String toSplit) {
         // split the string according to TO_IGNORE, removing empty strings and nullptrs
         return java.util.Arrays.stream(this.TO_IGNORE.split(toSplit))
                 .filter(value -> value != null && value.length() > 0)
@@ -135,13 +133,13 @@ public class Assembler {
 
                     // different addressing modes will require different things from the symbol
                     // a bne instruction, for example, requires the offset to the label
-                    if (rSym.addressingMode == AddressingMode.Relative) {
+                    if (rSym.getAddressingMode() == AddressingMode.Relative) {
                         // difference is label - reference to get the offset to the label
                         short labelAddr = asmSym.getData();
                         short refAddr = (short)(rSym.getBank() + rSym.getOffset());
                         byte offset = (byte)(labelAddr - refAddr);
                         littleEndianAddressData = new byte[]{ offset };
-                    } else if (rSym.addressingMode == AddressingMode.Absolute) {
+                    } else if (rSym.getAddressingMode() == AddressingMode.Absolute) {
                         // absolute requires the whole address
                         littleEndianAddressData = new byte[]{(byte) (asmSym.getData() & 0xFF), (byte) ((asmSym.getData() >> 8) & 0xFF)};
                     } else {
@@ -159,8 +157,7 @@ public class Assembler {
         }
     }
 
-    public boolean assemble(String filename) throws IOException
-    {
+    public boolean assemble(String filename) throws IOException {
         // an overloaded version of parseFile that allows us to call the function with a filename
         // this is for the case where we didn't pass a filename to the constructor
         try {
@@ -178,6 +175,7 @@ public class Assembler {
         int lineNumber = 1;
         if (this.asmIn != null)
         {
+            System.out.println("Assembling file...");
             Scanner asmScan = new Scanner(this.asmIn);
 
             while (asmScan.hasNextLine())
@@ -296,7 +294,6 @@ public class Assembler {
                                 throw new Exception("Symbol already in table");
                             } else {
                                 // add it to the symbol table
-                                System.out.println("Adding symbol \"" + fullSymName + "\" to the table");
                                 AssemblerSymbol sym = new AssemblerSymbol(fullSymName, (short)(this.currentOrigin + this.currentOffset));
                                 this.symbolTable.put(fullSymName, sym);
                             }
@@ -332,6 +329,8 @@ public class Assembler {
             // now, create an EmuFile
             EmuFile emu = new EmuFile(this.banks, this.debugSymbols);
             emu.writeEmuFile("assembled.emu");
+
+            System.out.println("Done.");
         }
         else
         {
@@ -341,8 +340,7 @@ public class Assembler {
         return true;
     }
 
-    public Assembler()
-    {
+    public Assembler() {
         // default constructor
         this.asmIn = null;
         this.currentOffset = 0;

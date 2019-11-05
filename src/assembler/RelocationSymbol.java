@@ -1,16 +1,16 @@
 package assembler;
 
-public class RelocationSymbol {
+class RelocationSymbol {
     // Used for resolving symbol references in files
-    String name;    // the symbol's name
-    short bank; // the bank where the symbol was found
-    short offset;   // the offset within that bank
-    int addressingMode; // the instruction addressing mode
+    private String name;    // the symbol's name
+    private short bank; // the bank where the symbol was found
+    private short offset;   // the offset within that bank
+    private int addressingMode; // the instruction addressing mode
 
-    public String getName() { return this.name; }
-    public short getBank() { return this.bank; }
-    public short getOffset() { return this.offset; }
-    public int getAddressingMode() { return this.addressingMode; }
+    String getName() { return this.name; }
+    short getBank() { return this.bank; }
+    short getOffset() { return this.offset; }
+    int getAddressingMode() { return this.addressingMode; }
 
     RelocationSymbol(String name, short bank, short offset, int addressingMode)
     {

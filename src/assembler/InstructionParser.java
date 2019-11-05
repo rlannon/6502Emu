@@ -1,9 +1,5 @@
 package assembler;
 
-import java.util.ArrayDeque;
-import java.util.NoSuchElementException;
-import java.util.regex.Pattern;
-
 class InstructionParser {
     // A class to parse instructions
 
@@ -75,8 +71,7 @@ class InstructionParser {
             new Instruction("STY", new byte[]{(byte)0xFF, (byte)0x84, (byte)0x94, (byte)0xFF, (byte)0x8c, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
     };
 
-    static boolean isMnemonic(String candidate)
-    {
+    static boolean isMnemonic(String candidate) {
         // Determines whether the supplied string is a mnemonic or not
         boolean found = false;
         int idx = 0;
@@ -274,8 +269,7 @@ class InstructionParser {
         }
     }
 
-    static byte[] parseInstruction(String[] data)
-    {
+    static byte[] parseInstruction(String[] data) {
         // Given a series of strings containing instruction mnemonics, returns the bytecode that those strings entail
 
         byte opcode = 0;

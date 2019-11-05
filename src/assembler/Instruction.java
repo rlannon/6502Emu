@@ -2,19 +2,17 @@ package assembler;
 
 import java.util.Hashtable;
 
-public class Instruction {
+class Instruction {
     private String mnemonic;
-    private boolean standalone;
     private byte[] addressingModes;
     private Hashtable<String, Integer> addrM;
 
-    public String getMnemonic()
+    String getMnemonic()
     {
         return this.mnemonic;
     }
 
-    public byte getAddressingMode(int index)
-    {
+    byte getAddressingMode(int index) {
         if (index < addressingModes.length)
         {
             return this.addressingModes[index];
@@ -25,14 +23,12 @@ public class Instruction {
         }
     }
 
-    public Instruction(String mnemonic, byte[] addressingModes)
-    {
+    Instruction(String mnemonic, byte[] addressingModes) {
         this.mnemonic = mnemonic;
         this.addressingModes = addressingModes;
     }
 
-    public Instruction(String mnemonic, String[] addressingModeName, int[] modeOpcode)
-    {
+    Instruction(String mnemonic, String[] addressingModeName, int[] modeOpcode) {
         // will allow us to change over the internal functionality in the future
 
         this.addrM = new Hashtable<>(56);

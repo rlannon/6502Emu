@@ -1,0 +1,23 @@
+.emu Format Description
+
+The .emu file format is used by the emulator to save and retrieve data about programs and emulator configurations.
+It is formatted as follows (using stickshift syntax):
+
+prg_header:
+    (4) magic_number = 0xC0, 'E', 'M', 'U'  ->  Used to identify the file format
+    (1) num_banks   ->  The number of banks of program data
+    (2) num_debug_symbols   ->  The number of debug symbols present
+    (1) config  ->  Whether config data is present (1) or not (0).
+
+for each as indicated by prg_header.num_banks:
+    (2) org ->  The origin address for the bank
+    (2) len ->  The length (in bytes) of the bank data
+    (len)   ->  The bank data
+
+for each as indicated by prg_header.num_debug_symbols:
+    (4) ->  Line number
+    (2) ->  The address of the line
+
+if prg_header.config:
+    config_header:
+        // config data
