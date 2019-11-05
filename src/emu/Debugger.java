@@ -3,17 +3,42 @@ package emu;
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.FileOutputStream;
+import java.util.Hashtable;
 
 public class Debugger {
     // The debugger for our CPU
 
     private CPU cpu;
-    private boolean stopped;   // whether we have stoped the CPU
+    private boolean paused;   // whether we have stoped the CPU
     boolean[] pagesUsed;    // tracks which pages have been touched by the CPU
+    Hashtable<Integer, Boolean> breakpoints;  // the breakpoints we have set
 
-    public void stop() {
+    /*
+
+    Utility functions
+
+     */
+
+    void setBreakpoint(int address) {
+        // Set a new breakpoint for the given address
+        this.breakpoints.put(address, Boolean.FALSE);
+    }
+
+    void removeBreakpoint(int address) {
+        // Remove the breakpoint at an address. If none exists, do nothing
+        this.breakpoints.remove(address);
+    }
+
+    /*
+
+    Execution functions
+    These functions are used in the process of executing and debugging the program
+
+    */
+
+    public void pause() {
         // temporarily halts the CPU
-        this.stopped = true;
+        this.paused = true;
     }
 
     public void terminate() {
@@ -23,12 +48,12 @@ public class Debugger {
 
     public void resume() {
         // resumes CPU execution after a debug event has stopped it
-        this.stopped = false;
+        this.paused = false;
     }
 
-    boolean isStopped() {
+    boolean isPaused() {
         // tells us whether the debug program has stopped CPU execution
-        return this.stopped;
+        return this.paused;
     }
 
     boolean hasHalted() {
@@ -117,8 +142,9 @@ public class Debugger {
 
     private Debugger() {
         // default constructor
-        this.stopped = false;
+        this.paused = false;
         this.pagesUsed = new boolean[256];  // all initialized to false
+        this.breakpoints = new Hashtable<>();
     }
 
     Debugger(CPU cpu) {

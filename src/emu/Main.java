@@ -5,6 +5,7 @@ class Main {
         try {
             Emulator emu = new Emulator();
             emu.assembleAndAdd("test.s");
+            //emu.setBreakpoint(0x8000);
             emu.run(true);
             emu.coreDump();
         } catch (Exception e) {

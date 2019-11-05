@@ -2,7 +2,6 @@ package emu;
 
 import assembler.Assembler;
 
-import java.security.Key;
 import java.util.Vector;
 import java.awt.event.*;
 
@@ -52,6 +51,10 @@ public class Emulator implements KeyListener {
         this.addBinary("assembled.emu");    // name for assembled file
     }
 
+    void setBreakpoint(int address) {
+        this.cpu.debugger.setBreakpoint(address);
+    }
+
     void addInput(int keyCode, short address, boolean triggersIRQ) {
         /*
 
@@ -82,8 +85,13 @@ public class Emulator implements KeyListener {
 
             // if we are debugging, use cpu.debugger.step(); otherwise, use cpu.step()
             if (debug) {
-                while (!this.cpu.debugger.isStopped() && !this.cpu.halted) {
-                    this.cpu.debugger.step();
+                while (!this.cpu.debugger.isPaused() && !this.cpu.halted) {
+                    // check to see if we have hit a breakpoint; if so, pause; else, step
+                    if (this.cpu.debugger.breakpoints.containsKey(this.cpu.pc)) {
+                        this.cpu.debugger.pause();
+                    } else {
+                        this.cpu.debugger.step();
+                    }
                 }
             } else {
                 this.cpu.step();
