@@ -177,6 +177,17 @@ public class CPU {
 
      */
 
+    private void storeInMemory(byte value, int address) {
+        // Stores a byte at a memory address
+        // Offset is 0
+        this.storeInMemory(value, address, 0);
+    }
+
+    private void storeInMemory(byte value, int address, int offset) {
+        // Stores a byte at a memory address with an offset
+        this.memory[address + (offset & 0xFF)] = value;
+    }
+
     // todo: implement store instruction funcionality
     // todo: track which pages have been touched if we are in debug mode
 
@@ -186,7 +197,7 @@ public class CPU {
         // Steps the CPU once; executes a single instruction
 
         // fetch the opcode
-        int opcode = this.fetchInstruction();
+        int opcode = this.fetchInstruction() & 0xFF;
         byte operand;
 
         /*
@@ -350,7 +361,7 @@ public class CPU {
              */
 
             // LDA: Immediate
-            case (byte)0xA9:
+            case 0xA9:
                 // get the operand
                 this.a = this.fetchImmediateByte();
 
@@ -358,34 +369,188 @@ public class CPU {
                 this.updateNZFlags(this.a);
                 break;
             // LDA: Zero
-            case (byte)0xA5:
+            case 0xA5:
                 this.a = this.fetchByteFromMemory(this.fetchImmediateByte());
                 this.updateNZFlags(this.a);
                 break;
             // LDA: Zero, X
-            case (byte)0xB5:
+            case 0xB5:
                 this.a = this.fetchByteFromMemory(this.fetchImmediateByte(), this.x);
                 this.updateNZFlags(this.a);
                 break;
             // LDA: Absolute
-            case (byte)0xAD:
+            case 0xAD:
                 this.a = this.fetchByteFromMemory(this.fetchImmediateShort());
                 this.updateNZFlags(this.a);
                 break;
             // LDA: Absolute, X
             // LDA: Absolute, Y
-            case (byte)0xBD:
-            case(byte)0xB9:
-                this.a = this.fetchByteFromMemory(this.fetchImmediateShort(), (opcode == (byte)0xBD) ? this.x: this.y);
+            case 0xBD:
+            case 0xB9:
+                this.a = this.fetchByteFromMemory(this.fetchImmediateShort(), (opcode == 0xBD) ? this.x: this.y);
                 this.updateNZFlags(this.a);
                 break;
-            case (byte)0xA1:
+            case 0xA1:
                 this.a = this.fetchIndirectX();
                 this.updateNZFlags(this.a);
                 break;
-            case (byte)0xB1:
+            case 0xB1:
                 this.a = this.fetchIndirectY();
                 this.updateNZFlags(this.a);
+                break;
+
+            /*
+
+            LDX
+            Load X Register
+
+            Loads some value into register X
+            Affects flags N, Z
+
+             */
+
+            // LDX: Immediate
+            case 0xa2:
+                this.x = fetchImmediateByte();
+                this.updateNZFlags(this.x);
+                break;
+            // LDX: Zero Page
+            // LDX: Zero Page, Y
+            case 0xa6:
+            case 0xb6:
+                this.x = this.fetchByteFromMemory(this.fetchImmediateByte(), (opcode == 0xb6) ? this.y : 0);
+                this.updateNZFlags(this.x);
+                break;
+            // LDX: Absolute
+            // LDX: Absolute, Y
+            case 0xae:
+            case 0xbe:
+                this.x = this.fetchByteFromMemory(this.fetchImmediateShort(), (opcode == 0xbe) ? this.y : 0);
+                this.updateNZFlags(this.x);
+                break;
+
+            /*
+
+            LDY
+            Load Y Register
+
+            Loads some value into register Y
+            Affects flags N, Z
+
+            a0 a4 b4 ac bc
+             */
+
+            // LDY: Immediate
+            case 0xa0:
+                this.y = this.fetchImmediateByte();
+                this.updateNZFlags(this.y);
+                break;
+            // LDY: Zero Page
+            // LDY: Zero Page, X
+            case 0xa4:
+            case 0xb4:
+                this.y = this.fetchByteFromMemory(this.fetchImmediateByte(), (opcode == 0xb4) ? this.x : 0);
+                this.updateNZFlags(this.y);
+                break;
+            // LDY: Absolute
+            // LDY: Absolute, X
+            case 0xac:
+            case 0xbc:
+                this.y = this.fetchByteFromMemory(this.fetchImmediateShort(), (opcode == 0xbc) ? this.x : 0);
+                this.updateNZFlags(this.y);
+                break;
+
+            // todo: some more instructions
+
+            /*
+
+            STA
+            Store Accumulator
+
+            Stores the accumulator at a given place in memory. Possible addressing modes are:
+                ZP:     0x85
+                ZP, X:  0x95
+                ABS:    0x8d
+                ABS, X: 0x9d
+                ABS, Y: 0x99
+                IndX:   0x81
+                IndY:   0x91
+
+            Affects no flags
+
+             */
+
+            // STA: ZP
+            case 0x85:
+                address = (int)this.fetchImmediateByte() & 0xFF;
+                this.storeInMemory(this.a, address);
+                break;
+            // STA: ZP, X
+            case 0x95:
+                address = (int)this.fetchImmediateByte() & 0xFF;
+                this.storeInMemory(this.a, address, this.x);
+                break;
+            // STA: ABS
+            case 0x8d:
+                address = (int)this.fetchImmediateShort() & 0xFFFF;
+                this.storeInMemory(this.a, address);
+                break;
+            // STA: ABS, X
+            // STA: ABS, Y
+            case 0x9d:
+            case 0x99:
+                address = (int)this.fetchImmediateShort() & 0xFFFF;
+                this.storeInMemory(this.a, address, (opcode == 0x9d) ? this.x : this.y);
+                break;
+
+            /*
+
+            Stack Instructions
+            Handle all operations with the stack
+
+            We can:
+                - Transfer SP to and from X
+                - Push and pull (pop) A
+                - Push and pull (pop) the processor status
+
+            Note that push instructions write the data to memory[stack pointer], *then* decrement
+            Likewise, pull instructions increment, *then* retrieve data from the stack
+
+            Affect no flags
+
+             */
+
+            // TXS
+            case 0x9a:
+                this.sp = this.x;
+                break;
+            // TSX
+            case 0xba:
+                this.x = this.sp;
+                break;
+            // PHA
+            case 0x48:
+                int stackAddress = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
+                this.memory[stackAddress] = this.a;
+                this.sp--;
+                break;
+            // PLA
+            case 0x68:
+                this.sp++;
+                stackAddress = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
+                this.a = this.memory[stackAddress];
+                break;
+            // PHP
+            case 0x08:
+                stackAddress = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
+                this.memory[stackAddress] = this.status;
+                this.sp--;
+                break;
+            // PLP
+            case 0x28:
+                this.sp++;
+                stackAddress = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
+                this.status = this.memory[stackAddress];
                 break;
 
             // todo: finish implementing instructions
