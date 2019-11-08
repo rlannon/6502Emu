@@ -3,15 +3,15 @@ package assembler;
 class InstructionParser {
     // A class to parse instructions
 
-    static final String ZERO_PATTERN = "\\$[0-fF][0-fF],? ?[xXyY]?";
-    static final String ZERO_X = "\\$[0-fF][0-fF], [xX]";
-    static final String ZERO_Y = "\\$[0-fF][0-fF], [yY]";
-    static final String ABSOLUTE_PATTERN = "([a-zA-Z_]+[0-9a-zA-Z_]+)|(\\$[0-fF]+)";
-    static final String ABSOLUTE_INDEXED_PATTERN = "[a-zA-Z_]+[0-9a-zA-Z_]+, [xXyY]";
-    static final String INDIRECT_Y_PATTERN = "\\([a-zA-Z_]+[0-9a-zA-Z_]+\\), [yY]";
-    static final String INDIRECT_X_PATTERN = "\\([a-zA-Z_]+[0-9a-zA-Z_]+, [xX]\\)";
+    private static final String ZERO_PATTERN = "\\$[0-fF][0-fF],? ?[xXyY]?";
+    private static final String ZERO_X = "\\$[0-fF][0-fF], [xX]";
+    private static final String ZERO_Y = "\\$[0-fF][0-fF], [yY]";
+    private static final String ABSOLUTE_PATTERN = "([a-zA-Z_]+[0-9a-zA-Z_]+)|(\\$[0-fF]+)";
+    private static final String ABSOLUTE_INDEXED_PATTERN = "[a-zA-Z_]+[0-9a-zA-Z_]+, [xXyY]";
+    private static final String INDIRECT_Y_PATTERN = "\\([a-zA-Z_]+[0-9a-zA-Z_]+\\), [yY]";
+    private static final String INDIRECT_X_PATTERN = "\\([a-zA-Z_]+[0-9a-zA-Z_]+, [xX]\\)";
 
-    static final Instruction[] OPCODES = {
+    private static final Instruction[] OPCODES = {
             /* Immediate, Zero, ZeroX, ZeroY, Absolute, AbsoluteX, AbsoluteY, Indirect, IndirectX, IndirectY, Single, Relative */
             new Instruction("ADC", new byte[]{0x069, 0x65, 0x75, (byte)0xFF, 0x6d, 0x7d, 0x79, (byte)0xFF, 0x61, 0x71, (byte)0xFF, (byte)0xFF}),
             new Instruction("AND", new byte[]{0x29, 0x25, 0x35, (byte)0xFF, 0x2d, 0x3d, 0x39, (byte)0xFF, 0x21, 0x31, (byte)0xFF, (byte)0xFF}),
@@ -291,7 +291,7 @@ class InstructionParser {
                     return new byte[]{opcode};
                 } else {
                     // if we have a label, the value should be 0; otherwise, use parseNumber
-                    value = (data[1].matches(".?[a-zA-Z_]+.+")) ? 0x00 : parseNumber(data[1]);
+                    value = (data[1].matches("\\.?[a-zA-Z_]+.+")) ? 0x00 : parseNumber(data[1]);
 
                     // get instruction width based on addressing mode
                     if (addressingMode == AddressingMode.Immediate || addressingMode == AddressingMode.IndirectX ||

@@ -29,6 +29,16 @@ public class Debugger {
         this.breakpoints.remove(address);
     }
 
+    void addUsedPage(int page) {
+        this.pagesUsed[page] = true;
+    }
+
+    void addUsedPageByAddress(int address) {
+        // adds the page under 'address' as used
+        int pageNumber = (address >> 8) & 0xFF;
+        this.pagesUsed[pageNumber] = true;
+    }
+
     /*
 
     Execution functions
@@ -144,6 +154,7 @@ public class Debugger {
         // default constructor
         this.paused = false;
         this.pagesUsed = new boolean[256];  // all initialized to false
+        this.pagesUsed[1] = true;   // we will always put the stack in a core dump
         this.breakpoints = new Hashtable<>();
     }
 

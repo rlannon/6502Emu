@@ -30,9 +30,6 @@ public class CPU {
     // the high byte of the stack pointer is hardwired to be 0x01
     final private static byte STACK_HIGH = (byte)0x01;
 
-    // program origin (program start address)
-    private short org;
-
     // our ram - an array of bytes
     byte[] memory;
 
@@ -107,6 +104,15 @@ public class CPU {
         this.status |= flag;
     }
 
+    private void clearFlag(byte flag) {
+        this.status &= ~(flag);
+    }
+
+    private void clearFlags() {
+        // Clears all processor flags except D and I
+        this.status &= ~(Status.NEGATIVE | Status.OVERFLOW | Status.ZERO | Status.CARRY);
+    }
+
     /*
 
     Fetch Instructions
@@ -167,7 +173,7 @@ public class CPU {
         byte msb = this.memory[this.pc];
         this.pc++;
 
-        return (short)((msb << 8) | lsb);
+        return (short)((msb << 8) | (lsb & 0xFF));
     }
 
     /*
@@ -186,9 +192,12 @@ public class CPU {
     private void storeInMemory(byte value, int address, int offset) {
         // Stores a byte at a memory address with an offset
         this.memory[address + (offset & 0xFF)] = value;
+        if (this.debugMode) {
+            this.debugger.addUsedPageByAddress(address);
+        }
     }
 
-    // todo: implement store instruction funcionality
+    // todo: implement store instruction functionality
     // todo: track which pages have been touched if we are in debug mode
 
     // Program execution
@@ -210,6 +219,11 @@ public class CPU {
             // BRK
             case 0x00:
                 this.halted = true;
+                break;
+
+            // NOP
+            case 0xEA:
+                // do nothing
                 break;
 
             /*
@@ -348,7 +362,353 @@ public class CPU {
                 this.updateNZFlags(this.a);
                 break;
 
-            // todo: implement instructions between ASL and LDA
+            /*
+
+            BIT
+            Test bits. This sets the Z flag as if the value at the address were ANDed with A
+            The N and V flags are set to match bits 7 and 6, respectively, of the value stored at the tested address
+            However, it does not modify the A register
+
+            Affects flags N, V, Z
+
+             */
+
+            // BIT: Zero Page
+            case 0x24:
+            // BIT: Absolute
+            case 0x2C:
+                // get the value, update Z flag
+                if (opcode == 0x24) {
+                    address = (int) this.fetchImmediateByte() & 0xFF;
+                } else {
+                    address = (int) this.fetchImmediateShort() & 0xFFFF;
+                }
+
+                if ((this.a & this.memory[address]) == 0) {
+                    this.setFlag(Status.ZERO);
+                } else {
+                    this.clearFlag(Status.ZERO);
+                }
+
+                // update the flags
+                if ((address & 0b10000000) != 0) this.setFlag(Status.NEGATIVE);
+                if ((address & 0b01000000) != 0) this.setFlag(Status.OVERFLOW);
+                break;
+
+            /*
+
+            Branch Instructions
+                BPL -   Branch on Plus (N flag clear)
+                BMI -   Branch on Minus (N flag set)
+                BVC -   Branch on Overflow clear
+                BVS -   Branch on Overflow set
+                BCC -   Branch on Carry clear
+                BCS -   Branch on Carry set
+                BNE -   Branch on not equal (Z flag clear)
+                BEQ -   Branch on equal (Z flag set)
+
+            All branch instructions use relative addressing mode
+
+             */
+
+            // BPL
+            case 0x10:
+                this.branchIfClear(Status.NEGATIVE);
+                break;
+            // BMI
+            case 0x30:
+                this.branchIfSet(Status.NEGATIVE);
+                break;
+            // BVC
+            case 0x50:
+                this.branchIfClear(Status.OVERFLOW);
+                break;
+            // BVS
+            case 0x70:
+                this.branchIfSet(Status.OVERFLOW);
+                break;
+            // BCC
+            case 0x90:
+                this.branchIfClear(Status.CARRY);
+                break;
+            // BCS
+            case 0xB0:
+                this.branchIfSet(Status.CARRY);
+                break;
+            // BNE
+            case 0xD0:
+                this.branchIfClear(Status.ZERO);
+                break;
+            // BEQ
+            case 0xF0:
+                this.branchIfSet(Status.ZERO);
+                break;
+
+            /*
+
+            CMP
+            Compare Accumulator
+
+            Compares the accumulator to some value. It sets flags as if a subtraction had been carried out.
+            If:
+                A != Val    ->  Clear C, Z; set N
+                A == Val    ->  Set Z flag
+                A >= Val    ->  Set Carry
+                A >= $80    ->  Set N flag
+            Affects N, Z, C flags
+
+            Note that these comparisons do not treat
+
+             */
+
+            // CMP: Immediate
+            case 0xC9:
+                this.compare(this.a, this.fetchImmediateByte());
+                break;
+            // CMP: Zero Page
+            case 0xC5:
+                this.compare(this.a, this.fetchByteFromMemory(this.fetchImmediateByte() & 0xFF));
+                break;
+            // CMP: ZP, X
+            case 0xD5:
+                this.compare(this.a, this.fetchByteFromMemory(this.fetchImmediateByte() & 0xFF, this.x));
+                break;
+            // CMP: Absolute
+            case 0xCD:
+                this.compare(this.a, this.fetchByteFromMemory(this.fetchImmediateShort() & 0xFFFF));
+                break;
+            // CMP: Absolute, X
+            case 0xDD:
+                this.compare(this.a, this.fetchByteFromMemory(this.fetchImmediateShort() & 0xFFFF, this.x));
+                break;
+            // CMP: Absolute, Y
+            case 0xD9:
+                this.compare(this.a, this.fetchByteFromMemory(this.fetchImmediateShort() & 0xFFFF, this.y));
+                break;
+            // Indirect, X
+            case 0xC1:
+                this.compare(this.a, this.fetchIndirectX());
+                break;
+            // Indirect, Y
+            case 0xC2:
+                this.compare(this.a, this.fetchIndirectY());
+                break;
+
+            /*
+
+            CPX
+            Compare X Register
+
+            Compares the X register to some value.
+            Sets flags identically to the CMP instruction.
+
+             */
+
+            // CPX: Immediate
+            case 0xE0:
+                this.compare(this.x, this.fetchImmediateByte());
+                break;
+            // CPX: Zero Page
+            case 0xE4:
+                this.compare(this.x, this.fetchByteFromMemory(this.fetchImmediateByte() & 0xFF));
+                break;
+            // CPX: Absolute
+            case 0xEC:
+                this.compare(this.x, this.fetchByteFromMemory(this.fetchImmediateShort() & 0xFFFF));
+                break;
+
+            /*
+
+            CPY
+            Compare Y Register
+
+            Compares the Y register to some value.
+            Sets flags identically to the CMP instruction.
+
+             */
+
+            // CPY: Immediate
+            case 0xC0:
+                this.compare(this.y, this.fetchImmediateByte());
+                break;
+            // CPY: Zero Page
+            case 0xC4:
+                this.compare(this.y, this.fetchByteFromMemory(this.fetchImmediateByte() & 0xFF));
+                break;
+            // CPY: Absolute
+            case 0xCC:
+                this.compare(this.y, this.fetchByteFromMemory(this.fetchImmediateShort() & 0xFFFF));
+                break;
+
+            /*
+
+            DEC
+            Decrement memory
+
+            Affects N and Z flags, depending on whether the result is negative or 0
+
+             */
+
+            // DEC: Zero Page
+            case 0xC6:
+            // DEC: Zero Page, X
+            case 0xD6:
+                address = (this.fetchImmediateByte() & 0xFF) + ((opcode == 0xC6) ? 0 : this.x);
+                this.memory[address]--;
+                this.updateNZFlags(this.memory[address]);
+                break;
+            // DEC: Absolute
+            case 0xCE:
+            // DEC: Absolute, X
+            case 0xDE:
+                address = (this.fetchImmediateShort() & 0xFFFF) + ((opcode == 0xCE) ? 0 : this.x);
+                this.memory[address]--;
+                this.updateNZFlags(this.memory[address]);
+                break;
+
+            /*
+
+            EOR
+            Bitwise XOR
+
+            Performs XOR on accumulator and another value, storing the result in the accumulator
+
+            Affects N and Z flags, depending on the value of the result
+
+             */
+
+            // EOR: Immediate
+            case 0x49:
+                this.a ^= this.fetchImmediateByte();
+                this.updateNZFlags(this.a);
+                break;
+            // EOR: Zero Page
+            // EOR: Zero Page, X
+            case 0x45:
+            case 0x55:
+                this.a ^= this.fetchByteFromMemory(this.fetchImmediateByte(), (opcode == 0x45) ? 0 : this.x);
+                this.updateNZFlags(this.a);
+                break;
+            // EOR: Absolute
+            case 0x4D:
+                this.a ^= this.fetchByteFromMemory(this.fetchImmediateShort());
+                this.updateNZFlags(this.a);
+                break;
+            // EOR: Absolute, X
+            // EOR: Absolute, Y
+            case 0x5D:
+            case 0x59:
+                this.a ^= this.fetchByteFromMemory(this.fetchImmediateShort(), (opcode == 0x5D) ? this.x : this.y);
+                this.updateNZFlags(this.a);
+                break;
+            // EOR: Indirect X
+            case 0x41:
+                this.a ^= this.fetchIndirectX();
+                this.updateNZFlags(this.a);
+                break;
+            // EOR: Indirect Y
+            case 0x51:
+                this.a ^= this.fetchIndirectY();
+                this.updateNZFlags(this.a);
+                break;
+
+            /*
+
+            Flag / Status Instructions
+            These affect flags where noted
+
+            NB: The CLD and SED instructions are enabled, but the decimal flag is not implemented on this processor
+
+             */
+
+            // CLC
+            case 0x18:
+                this.clearFlag(Status.CARRY);
+                break;
+            // SEC
+            case 0x38:
+                this.setFlag(Status.CARRY);
+                break;
+            // CLI
+            case 0x58:
+                this.clearFlag(Status.INTERRUPT_DISABLE);
+                break;
+            // SEI
+            case 0x78:
+                this.setFlag(Status.INTERRUPT_DISABLE);
+                break;
+            // CLV
+            case 0xB8:
+                this.clearFlag(Status.OVERFLOW);
+                break;
+            // CLD
+            case 0xD8:
+                this.clearFlag(Status.DECIMAL);
+                break;
+            // SED
+            case 0xF8:
+                this.setFlag(Status.DECIMAL);
+                break;
+
+            /*
+
+            INC
+            Increment memory
+
+            Affects N and Z flags, depending on the result
+
+             */
+
+            // INC: Zero Page
+            case 0xE6:
+            // INC: ZP, X
+            case 0xF6:
+                address = (this.fetchImmediateByte() & 0xFF) + ((opcode == 0xE6) ? 0 : this.x);
+                this.memory[address]++;
+                this.updateNZFlags(this.memory[address]);
+                break;
+            // INC: Absolute
+            case 0xEE:
+            // INC: Absolute, X
+            case 0xFE:
+                address = (this.fetchImmediateShort() & 0xFFFF) + ((opcode == 0xFE) ? 0 : this.x);
+                this.memory[address]++;
+                this.updateNZFlags(this.memory[address]);
+                break;
+
+            /*
+
+            JMP
+            Jump to memory address
+
+            Transfers program execution to the following address OR the location contained within the following address
+            Note: Indirect jump should never use a vector beginning on the last byte of a page
+            For example:
+                jmp ($30ff)
+            will not fetch the address from $3100, $30ff, but rather from $3000, $30ff
+
+            Affects no flags
+
+             */
+
+            // JMP: Absolute
+            case 0x4C:
+                address = this.fetchImmediateShort() & 0xFFFF;
+                this.pc = address;
+                break;
+            // JMP: Indirect
+            case 0x6C:
+                int pointer = this.fetchImmediateShort() & 0xFFFF;
+                int ptrLow = pointer & 0xFF;
+                int ptrHigh = (pointer & 0xFF00) >> 8;
+
+                int addressLow = this.memory[(ptrHigh << 8) | ptrLow];
+                int addressHigh = this.memory[(ptrHigh << 8) | ((ptrLow + 1) & 0xFF)];
+
+                this.pc = ((addressHigh & 0xFF) << 8) | (addressLow & 0xFF);
+                break;
+
+            // todo: implement more instructions
 
             /*
 
@@ -460,7 +820,7 @@ public class CPU {
                 this.updateNZFlags(this.y);
                 break;
 
-            // todo: some more instructions
+            // todo: implement instructions between LDY and STA
 
             /*
 
@@ -501,6 +861,25 @@ public class CPU {
             case 0x99:
                 address = (int)this.fetchImmediateShort() & 0xFFFF;
                 this.storeInMemory(this.a, address, (opcode == 0x9d) ? this.x : this.y);
+                break;
+            // STA: Indirect X
+            case 0x81:
+                // Handle an indexed indirect ($c0, x) fetch
+                // Looks at location $c0, x; obtains data and uses that (and the following byte) as the address
+                int base = this.fetchImmediateByte() & 0xFF;   // fetch the address
+
+                // pointer is at location base + index
+                address = (this.memory[base + (this.x & 0xFF)]) | (this.memory[base + (this.x & 0xFF) + 1] << 8);
+                this.memory[address] = this.a;
+                break;
+            // STA: Indirect Y
+            case 0x91:
+                // Handle an indirect indexed ($c0), y fetch
+                // Looks at location $c0; goes to that location + y; gets that value
+
+                pointer = this.fetchImmediateByte() & 0xFF;   // fetch the pointer
+                address = (this.memory[pointer] + (this.y & 0xFF)) & 0xFFFF;   // go to the address indicated by the pointer, offset by index
+                this.memory[address] = this.a;
                 break;
 
             /*
@@ -553,8 +932,51 @@ public class CPU {
                 this.status = this.memory[stackAddress];
                 break;
 
-            // todo: finish implementing instructions
+            /*
 
+            STX
+            Store X register at a location in memory
+
+            Affects no flags
+
+             */
+
+            // STX: ZP
+            case 0x86:
+            // STX: ZP, Y
+            case 0x96:
+                address = (int)this.fetchImmediateByte() & 0xFF;
+                this.storeInMemory(this.x, address, (opcode == 0x86) ? 0 : this.y);
+                break;
+            // STX: Absolute
+            case 0x8e:
+                address = (int)this.fetchImmediateShort() & 0xFFFF;
+                this.storeInMemory(this.x, address);
+                break;
+
+            /*
+
+            STY
+            Store Y register at a location in memory
+
+            Affects no flags
+
+             */
+
+            // STY: ZP
+            case 0x84:
+            // STY: ZP, X
+            case 0x94:
+                address = (int)this.fetchImmediateByte() & 0xFF;
+                this.storeInMemory(this.y, address, (opcode == 0x84) ? 0 : this.x);
+                break;
+            // STY: Absolute
+            case 0x8c:
+                address = (int)this.fetchImmediateShort() & 0xFFFF;
+                this.storeInMemory(this.y, address);
+                break;
+
+            // Invalid opcodes will fall through to here
             default:
                 // if the instruction isn't in the list, it is illegal
                 throw new Exception("Illegal instruction");
@@ -622,14 +1044,66 @@ public class CPU {
         this.updateNZFlags(this.memory[address]);
     }
 
+    private void compare(short register, short value) {
+        /*
+
+        Compares two values, setting flags accordingly
+
+        This is how the flags are affected:
+            R == Val    ->  Set Z flag
+            R >= Val    ->  Set Carry
+            R != Val    ->  Set N
+
+         */
+
+        register &= 0xFF;
+        value &= 0xFF;
+
+        this.clearFlags();
+
+        if (register == value) {
+            this.setFlag(Status.CARRY);
+            this.setFlag(Status.ZERO);
+        } else {
+            // If R is greater than V, set C
+            if (register > value) {
+                this.setFlag(Status.CARRY);
+            } else {
+                // R must be < value if we are here
+                this.setFlag(Status.NEGATIVE);
+            }
+        }
+    }
+
+    /*
+
+    Branching functions
+    These manipulate the program counter
+
+     */
+
+    private void branchIfSet(byte flag) {
+        // Performs a branch if 'flag' is set
+        byte offset = this.fetchImmediateByte();
+        boolean branch = this.isSet(flag);
+        if (branch) this.pc += offset;
+    }
+
+    private void branchIfClear(byte flag) {
+        // Performs a branch if 'flag' is clear
+        byte offset = this.fetchImmediateByte();
+        boolean branch = !this.isSet(flag);
+        if (branch) this.pc += offset;
+    }
+
     // Constructors and setup methods
 
     public void reset() {
         this.status = (byte)0b00110000; // initialize status register
         this.sp = (byte)0xff;    // stack register should be initialized to 0xff (grows downwards)
-        int startAddress = (this.memory[RESET_HIGH] << 8 | this.memory[RESET_LOW]) & 0xFFFF; // obtain the reset address from the reset vector
-        this.pc = startAddress;    // set the start address
+        this.pc = (this.memory[RESET_HIGH] << 8 | this.memory[RESET_LOW]) & 0xFFFF; // obtain the reset address from the reset vector
         this.halted = false;    // to allow execution to begin, make sure the halted flag is false
+        this.setFlag(Status.INTERRUPT_DISABLE); // a system reset should disable interrupts
     }
 
     public void loadBinFile(String emuFilename) throws Exception {
@@ -647,12 +1121,12 @@ public class CPU {
                 byte[] data = segment.getData();
 
                 // set our debugger's pages used if we are in debug mode
-                int page = address >> 8;
                 int pageIndex = (data.length / 256);
+                int pageNumber = (address >> 8) & 0xFF;
                 while (pageIndex >= 0) {
-                    this.debugger.pagesUsed[page] = true;
-                    page++;
+                    this.debugger.addUsedPage(pageNumber);
                     pageIndex--;
+                    pageNumber++;
                 }
 
                 // copy in the program data
@@ -672,9 +1146,10 @@ public class CPU {
     public CPU(boolean debug) {
         // default constructor; initializes the cpu with no program memory
         this.memory = new byte[RAM_SIZE];
-        this.org = (short)DEFAULT_ORG;  // this should default to 0x8000, but can be modified by the program
-        this.memory[RESET_LOW] = (byte)(this.org & 0xFF);
-        this.memory[RESET_HIGH] = (byte)(this.org >> 8);
+        // program origin (program start address)
+        short org = (short) DEFAULT_ORG;  // this should default to 0x8000, but can be modified by the program
+        this.memory[RESET_LOW] = (byte)(org & 0xFF);
+        this.memory[RESET_HIGH] = (byte)(org >> 8);
         this.debugMode = debug;
         this.debugger = new Debugger(this);
     }

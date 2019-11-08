@@ -132,12 +132,12 @@ public class Assembler {
                     byte[] littleEndianAddressData = null;
 
                     // different addressing modes will require different things from the symbol
-                    // a bne instruction, for example, requires the offset to the label
                     if (rSym.getAddressingMode() == AddressingMode.Relative) {
-                        // difference is label - reference to get the offset to the label
+                        // The Relative addressing mode requires an offset (signed) to the address
+                        // difference is label - reference to get the offset to the label - 2, to account for the instruction's width
                         short labelAddr = asmSym.getData();
                         short refAddr = (short)(rSym.getBank() + rSym.getOffset());
-                        byte offset = (byte)(labelAddr - refAddr);
+                        byte offset = (byte)(labelAddr - refAddr - 2);
                         littleEndianAddressData = new byte[]{ offset };
                     } else if (rSym.getAddressingMode() == AddressingMode.Absolute) {
                         // absolute requires the whole address
