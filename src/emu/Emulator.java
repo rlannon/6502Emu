@@ -28,25 +28,16 @@ public class Emulator implements KeyListener {
         System.out.println(e.getID() + " released!");
     }
 
-    void assemble(String filename) {
+    void assemble(String filename) throws Exception {
         // Assemble a file
-
-        try {
-            this.assemble.assemble(filename);
-        } catch (Exception e) {
-            System.out.println("Error: " + e.toString());
-        }
+        this.assemble.assemble(filename);
     }
 
-    void addBinary(String filename) {
-        try {
-            this.cpu.loadBinFile(filename);
-        } catch (Exception e) {
-            System.out.println("The system encountered an error when loading the bin file: " + e.toString());
-        }
+    void addBinary(String filename) throws Exception {
+        this.cpu.loadBinFile(filename);
     }
 
-    void assembleAndAdd(String filename) {
+    void assembleAndAdd(String filename) throws Exception {
         this.assemble(filename);    // assemble the file
         this.addBinary("assembled.emu");    // name for assembled file
     }

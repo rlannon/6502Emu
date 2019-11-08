@@ -269,52 +269,46 @@ class InstructionParser {
         }
     }
 
-    static byte[] parseInstruction(String[] data) {
+    static byte[] parseInstruction(String[] data) throws Exception {
         // Given a series of strings containing instruction mnemonics, returns the bytecode that those strings entail
 
         byte opcode = 0;
 
-        try {
-            int addressingMode = getAddressingMode(data);
-            short value;
+        int addressingMode = getAddressingMode(data);
+        short value;
 
-            opcode = getOpcode(data[0], addressingMode);
+        opcode = getOpcode(data[0], addressingMode);
 
-            // the opcode will be 0xFF (an invalid instruction) if we had a bad addressing mode
-            if (opcode == (byte)0xFF)
-            {
-                throw new Exception("Invalid opcode or addressing mode");
-            }
-            else {
-                if (addressingMode == AddressingMode.Single) {
-                    // instruction width 1
-                    return new byte[]{opcode};
+        // the opcode will be 0xFF (an invalid instruction) if we had a bad addressing mode
+        if (opcode == (byte)0xFF)
+        {
+            throw new Exception("Invalid opcode or addressing mode");
+        }
+        else {
+            if (addressingMode == AddressingMode.Single) {
+                // instruction width 1
+                return new byte[]{opcode};
+            } else {
+                // if we have a label, the value should be 0; otherwise, use parseNumber
+                value = (data[1].matches("\\.?[a-zA-Z_]+.+")) ? 0x00 : parseNumber(data[1]);
+
+                // get instruction width based on addressing mode
+                if (addressingMode == AddressingMode.Immediate || addressingMode == AddressingMode.IndirectX ||
+                        addressingMode == AddressingMode.IndirectY || addressingMode == AddressingMode.Relative ||
+                        addressingMode == AddressingMode.ZeroPage || addressingMode == AddressingMode.ZeroPageX ||
+                        addressingMode == AddressingMode.ZeroPageY) {
+                    // instruction width 2
+                    byte[] operand = new byte[]{(byte) (value & 0xFF)};
+                    return new byte[]{opcode, operand[0]};
+                } else if (addressingMode == AddressingMode.Absolute || addressingMode == AddressingMode.AbsoluteX ||
+                        addressingMode == AddressingMode.AbsoluteY || addressingMode == AddressingMode.Indirect) {
+                    // instruction width 3
+                    byte[] operand = new byte[]{(byte) (value & 0xFF), (byte) ((value >> 8) & 0xFF)};
+                    return new byte[]{opcode, operand[0], operand[1]};
                 } else {
-                    // if we have a label, the value should be 0; otherwise, use parseNumber
-                    value = (data[1].matches("\\.?[a-zA-Z_]+.+")) ? 0x00 : parseNumber(data[1]);
-
-                    // get instruction width based on addressing mode
-                    if (addressingMode == AddressingMode.Immediate || addressingMode == AddressingMode.IndirectX ||
-                            addressingMode == AddressingMode.IndirectY || addressingMode == AddressingMode.Relative ||
-                            addressingMode == AddressingMode.ZeroPage || addressingMode == AddressingMode.ZeroPageX ||
-                            addressingMode == AddressingMode.ZeroPageY) {
-                        // instruction width 2
-                        byte[] operand = new byte[]{(byte) (value & 0xFF)};
-                        return new byte[]{opcode, operand[0]};
-                    } else if (addressingMode == AddressingMode.Absolute || addressingMode == AddressingMode.AbsoluteX ||
-                            addressingMode == AddressingMode.AbsoluteY || addressingMode == AddressingMode.Indirect) {
-                        // instruction width 3
-                        byte[] operand = new byte[]{(byte) (value & 0xFF), (byte) ((value >> 8) & 0xFF)};
-                        return new byte[]{opcode, operand[0], operand[1]};
-                    } else {
-                        throw new Exception("Invalid syntax");
-                    }
+                    throw new Exception("Invalid syntax");
                 }
             }
-        } catch (Exception e) {
-            System.out.println(e.toString());
         }
-
-        return new byte[]{};
     }
 }

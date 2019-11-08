@@ -157,7 +157,7 @@ public class Assembler {
         }
     }
 
-    public boolean assemble(String filename) throws IOException {
+    public boolean assemble(String filename) throws Exception {
         // an overloaded version of parseFile that allows us to call the function with a filename
         // this is for the case where we didn't pass a filename to the constructor
         try {
@@ -169,7 +169,7 @@ public class Assembler {
         return this.assemble();
     }
 
-    boolean assemble() throws IOException {
+    boolean assemble() throws Exception {
         // parses the ASM file this.asmIn
 
         int lineNumber = 1;
@@ -180,93 +180,70 @@ public class Assembler {
 
             while (asmScan.hasNextLine())
             {
-                // add the current line and its address to our debugSymbols vector
-                this.debugSymbols.add(new DebugSymbol(lineNumber, (short)(this.currentOrigin + this.currentOffset)));
+                try {
+                    // add the current line and its address to our debugSymbols vector
+                    this.debugSymbols.add(new DebugSymbol(lineNumber, (short) (this.currentOrigin + this.currentOffset)));
 
-                // get the line
-                String line = asmScan.nextLine();
+                    // get the line
+                    String line = asmScan.nextLine();
 
-                // split the line into its components, ignoring comments and whitespace
-                String[] lineData = splitString(line);
+                    // split the line into its components, ignoring comments and whitespace
+                    String[] lineData = splitString(line);
 
-                // skip all empty lines and comments
-                if (line.length() > 0 && lineData.length > 0)
-                {
-                    // check to see if we have an instruction
-                    if (InstructionParser.isMnemonic(lineData[0]))
-                    {
-                        // check to see if lineData[1] is a symbol name; if so, add it to the relocation table
-                        if (lineData.length > 1)
-                        {
-                            if (lineData[1].matches("(?!\\$)(#?\\.?[a-zA-Z_]+[0-9a-zA-Z_]*)"))
-                            {
-                                // if we have the address-of-symbol operator (#), skip it
-                                if (lineData[1].charAt(0) == '#')
-                                {
-                                    lineData[1] = lineData[1].substring(1);
-                                }
-
-                                // if we have a ., get the parent label
-                                if (lineData[1].charAt(0) == '.')
-                                {
-                                    try {
-                                        lineData[1] = getFullSymbolName(lineData[1]);
-                                    } catch (Exception e) {
-                                        System.out.println(e.toString());
+                    // skip all empty lines and comments
+                    if (line.length() > 0 && lineData.length > 0) {
+                        // check to see if we have an instruction
+                        if (InstructionParser.isMnemonic(lineData[0])) {
+                            // check to see if lineData[1] is a symbol name; if so, add it to the relocation table
+                            if (lineData.length > 1) {
+                                if (lineData[1].matches("(?!\\$)(#?\\.?[a-zA-Z_]+[0-9a-zA-Z_]*)")) {
+                                    // if we have the address-of-symbol operator (#), skip it
+                                    if (lineData[1].charAt(0) == '#') {
+                                        lineData[1] = lineData[1].substring(1);
                                     }
-                                }
 
-                                try {
+                                    // if we have a ., get the parent label
+                                    if (lineData[1].charAt(0) == '.') {
+                                        lineData[1] = getFullSymbolName(lineData[1]);
+                                    }
+
                                     this.relocationTable.add(new RelocationSymbol(lineData[1], this.currentOrigin, this.currentOffset, InstructionParser.getAddressingMode(lineData)));
-                                } catch (Exception e) {
-                                    System.out.println(e.toString());
                                 }
                             }
+
+                            // get our instruction data, update the offset, and add the bytes to our bytecode buffer
+                            byte[] instructionData = InstructionParser.parseInstruction(lineData);
+                            byte[] bytecode = new byte[this.buffer.length + instructionData.length];
+                            System.arraycopy(this.buffer, 0, bytecode, 0, this.buffer.length);
+                            System.arraycopy(instructionData, 0, bytecode, this.buffer.length, instructionData.length);
+                            this.buffer = bytecode;
+
+                            // update the offset
+                            this.currentOffset += instructionData.length;   // increase our offset
                         }
+                        // finally, check to see if we have an assembler directive
+                        else if (isDirective(lineData[0])) {
+                            // .org directive
+                            if (lineData[0].toLowerCase().equals(".org")) {
+                                // check to see if we have data in our current buffer
+                                if (this.buffer.length > 0) {
+                                    // create a new bank and add it to our banks
+                                    this.banks.add(new Bank(this.currentOrigin, this.buffer));
 
-                        // get our instruction data, update the offset, and add the bytes to our bytecode buffer
-                        byte[] instructionData = InstructionParser.parseInstruction(lineData);
-                        byte[] bytecode = new byte[this.buffer.length + instructionData.length];
-                        System.arraycopy(this.buffer, 0, bytecode, 0, this.buffer.length);
-                        System.arraycopy(instructionData, 0, bytecode, this.buffer.length, instructionData.length);
-                        this.buffer = bytecode;
+                                    // clear the buffer
+                                    this.buffer = new byte[]{};
+                                }
 
-                        // update the offset
-                        this.currentOffset += instructionData.length;   // increase our offset
-                    }
-                    // finally, check to see if we have an assembler directive
-                    else if (isDirective(lineData[0]))
-                    {
-                        // .org directive
-                        if (lineData[0].toLowerCase().equals(".org"))
-                        {
-                            // check to see if we have data in our current buffer
-                            if (this.buffer.length > 0)
-                            {
-                                // create a new bank and add it to our banks
-                                this.banks.add(new Bank(this.currentOrigin, this.buffer));
-
-                                // clear the buffer
-                                this.buffer = new byte[]{};
-                            }
-
-                            // get the new origin and update currentOrigin and currentOffset
-                            try
-                            {
+                                // get the new origin and update currentOrigin and currentOffset
                                 this.currentOrigin = InstructionParser.parseNumber(lineData[1]);
                                 this.currentOffset = 0;
 
                                 // we should also update the parent symbol because we are in a new segment
                                 this.parentSymbolName = null;
-                            } catch (Exception e) {
-                                System.out.println("Parse error: " + e.toString());
                             }
                         }
-                    }
-                    // otherwise, it is a symbol name
-                    else
-                    {
-                        try {
+                        // otherwise, it is a symbol name
+                        else {
                             // the symbol must be followed immediately by a colon or an equals sign
                             if (lineData.length == 1) {
                                 if (lineData[0].charAt(lineData[0].length() - 1) == ':') {
@@ -278,8 +255,7 @@ public class Assembler {
                                 if (!lineData[1].equals("=")) {
                                     throw new Exception("Invalid syntax");
                                 } else {
-                                    if (lineData.length > 3)
-                                    {
+                                    if (lineData.length > 3) {
                                         throw new Exception("Invalid syntax");
                                     }
                                 }
@@ -289,26 +265,22 @@ public class Assembler {
                             String fullSymName = this.getFullSymbolName(lineData[0]);
 
                             // check to see if the symbol is already in our table
-                            if (this.symbolTable.contains(fullSymName))
-                            {
+                            if (this.symbolTable.contains(fullSymName)) {
                                 throw new Exception("Symbol already in table");
                             } else {
                                 // add it to the symbol table
-                                AssemblerSymbol sym = new AssemblerSymbol(fullSymName, (short)(this.currentOrigin + this.currentOffset));
+                                AssemblerSymbol sym = new AssemblerSymbol(fullSymName, (short) (this.currentOrigin + this.currentOffset));
                                 this.symbolTable.put(fullSymName, sym);
                             }
                         }
-                        catch (Exception e)
-                        {
-                            System.out.println("Error on line " + lineNumber + ": " + e.toString());
-                            return false;
-                        }
                     }
-                }
-                // skip empty lines, commented lines
+                    // skip empty lines, commented lines
 
-                // increment our line number
-                lineNumber++;
+                    // increment our line number
+                    lineNumber++;
+                } catch (Exception e) {
+                    throw new Exception("Error on line " + lineNumber + ": " + e.toString());
+                }
             }
 
             // once we are done, create a new bank if we had data
@@ -320,11 +292,7 @@ public class Assembler {
             asmScan.close();
 
             // next, resolve all symbols
-            try {
-                this.resolveSymbols();
-            } catch (Exception e) {
-                System.out.println("Could not resolve symbols; " + e.toString());
-            }
+            this.resolveSymbols();
 
             // now, create an EmuFile
             EmuFile emu = new EmuFile(this.banks, this.debugSymbols);
