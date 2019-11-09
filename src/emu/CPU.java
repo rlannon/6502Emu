@@ -92,11 +92,11 @@ public class CPU {
 
     private void updateNZFlags(byte value) {
         if (value < 0) {
-            this.status &= Status.ZERO;
-            this.status |= Status.NEGATIVE;
+            this.clearFlag(Status.ZERO);
+            this.setFlag(Status.NEGATIVE);
         } else if (value == 0) {
-            this.status &= ~Status.NEGATIVE;
-            this.status |= Status.ZERO;
+            this.clearFlag(Status.NEGATIVE);
+            this.setFlag(Status.ZERO);
         }
     }
 
@@ -1300,17 +1300,26 @@ public class CPU {
     private void add(int operand) {
         // adds operand + carry + a and sets flags accordingly
 
+        // first, ensure our operand is set correctly
+        operand &= 0xFF;
+
+        if (((this.a ^ operand) & 0x80) != 0)
+            this.clearFlag(Status.OVERFLOW);
+        else
+            this.setFlag(Status.OVERFLOW);
+
         // add A + M, and if C is set, add 1
         int result = (this.a & 0xFF) + (operand & 0xFF) + (isSet(Status.CARRY) ? 1 : 0);
-
-        // set the V flag if our result changed signs (went from < to > 127 or <= 128 to <)
-        if ( ((this.a < 127) && (result > 127)) || ((this.a < 0) && ((byte)operand < 0)) ) {
-            this.setFlag(Status.OVERFLOW);
-        }
 
         // set the carry flag if necessary
         if (result > 0xFF) {
             this.setFlag(Status.CARRY);
+            if (this.isSet(Status.OVERFLOW) && result >= 0x180)
+                this.clearFlag(Status.OVERFLOW);
+        } else {
+            this.clearFlag(Status.CARRY);
+            if (this.isSet(Status.OVERFLOW) && result < 0x80)
+                this.clearFlag(Status.OVERFLOW);
         }
 
         // set a to the result
