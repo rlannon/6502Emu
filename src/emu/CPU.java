@@ -151,10 +151,12 @@ public class CPU {
         // Handle an indexed indirect ($c0, x) fetch
         // Looks at location $c0, x; obtains data and uses that (and the following byte) as the address
 
-        int base = this.fetchImmediateByte() & 0xFF;   // fetch the address
+        int pointer = this.fetchImmediateByte() & 0xFF;   // fetch the pointer value
+        pointer += this.x & 0xFF;   // add the offset before fetching the actual address
 
-        // pointer is at location address + index
-        int address = (this.memory[base + (this.x & 0xFF)]) | (this.memory[base + (this.x & 0xFF) + 1] << 8);
+        int addressLow = this.memory[pointer] & 0xFF;
+        int addressHigh = this.memory[pointer + 1] & 0xFF;
+        int address = ((addressHigh << 8) | addressLow) & 0xFFFF;
         return this.memory[address];
     }
 
@@ -163,7 +165,9 @@ public class CPU {
         // Looks at location $c0; goes to that location + y; gets that value
 
         int pointer = this.fetchImmediateByte() & 0xFF;   // fetch the pointer
-        int address = (this.memory[pointer] + (this.y & 0xFF)) & 0xFFFF;   // go to the address indicated by the pointer, offset by index
+        int addressLow = (this.memory[pointer]) & 0xFF;
+        int addressHigh = (this.memory[pointer + 1]) & 0xFF;
+        int address = ((addressHigh << 8) | addressLow) & 0xFFFF;
         return this.memory[address];    // get the value at that address
     }
 
@@ -772,10 +776,12 @@ public class CPU {
                 this.a = this.fetchByteFromMemory(this.fetchImmediateShort(), (opcode == 0xBD) ? this.x: this.y);
                 this.updateNZFlags(this.a);
                 break;
+            // LDA: Indirect X
             case 0xA1:
                 this.a = this.fetchIndirectX();
                 this.updateNZFlags(this.a);
                 break;
+            // LDA: Indirect Y
             case 0xB1:
                 this.a = this.fetchIndirectY();
                 this.updateNZFlags(this.a);

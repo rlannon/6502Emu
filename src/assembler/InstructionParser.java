@@ -5,8 +5,8 @@ class InstructionParser {
 
     private static final String ZERO_PATTERN = "\\$[0-fF][0-fF],?";
     private static final String ABSOLUTE_PATTERN = "([a-zA-Z_]+[0-9a-zA-Z_]+)|(\\$[0-fF][0-fF][0-fF][0-fF],?)";    // either a label or an address
-    private static final String INDIRECT_Y_PATTERN = "\\([a-zA-Z_]+[0-9a-zA-Z_]+\\),";  // must be followed by "Y"
-    private static final String INDIRECT_X_PATTERN = "\\([a-zA-Z_]+[0-9a-zA-Z_]+,"; // must be followed by "X)"
+    private static final String INDIRECT_Y_PATTERN = "(\\([a-zA-Z_][0-9a-zA-Z_]+\\),)|(\\(\\$[0-fF][0-fF]\\),)";  // must be followed by "Y"
+    private static final String INDIRECT_X_PATTERN = "(\\([a-zA-Z_][0-9a-zA-Z_]+,)|(\\(\\$[0-fF][0-fF],)"; // must be followed by "X)"
 
     private static final Instruction[] OPCODES = {
             /* Immediate, Zero, ZeroX, ZeroY, Absolute, AbsoluteX, AbsoluteY, Indirect, IndirectX, IndirectY, Single, Relative */
@@ -158,13 +158,14 @@ class InstructionParser {
 
             // get the number, removing any trailing parens/commas if there are any
             String numString = candidate.substring(numIndex);
-            if (numString.length() != 2 && numString.length() != 4) {
+            char lastChar = numString.charAt(numString.length() - 1);
+            if (lastChar == ',' || lastChar == ')') {
                 // could end with a comma
-                if (numString.charAt(numString.length() - 1) == ',') {
+                if (lastChar == ',') {
                     numString = numString.substring(0, numString.length() - 1);
                 }
 
-                char lastChar = numString.charAt(numString.length() - 1);
+                lastChar = numString.charAt(numString.length() - 1);
                 // we may have an indirect mode (e.g., ($00), Y )
                 if (lastChar == ')') {
                     numString = numString.substring(0, numString.length() - 1);
