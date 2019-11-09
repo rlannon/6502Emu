@@ -17,12 +17,13 @@ public class Assembler {
      */
 
     // our assembler directives
-    private final static String[] asmDirectives = {
-            ".org", ".db", ".dw", ".segment"
+    private final static String[] ASM_DIRECTIVES = {
+            ".org", ".db", ".byte", ".dw", ".word", ".rsset", ".rs"
     };
 
     // some patterns
     private final static Pattern TO_IGNORE = Pattern.compile("[\\s]|(;.*)");
+    private final static String SYMBOL_NAME_REGEX = "(?!\\$)(#?\\.?[a-zA-Z_]+[0-9a-zA-Z_]*)";
 
     /*
 
@@ -35,6 +36,9 @@ public class Assembler {
     // place tracking
     private short currentOrigin;    // the current origin
     private short currentOffset;    // the current byte offset from the origin
+
+    // data address tracking
+    private short rsAddress; // the internal counter for the .rs directive
 
     // bank and data buffer
     private Vector<Bank> banks;
@@ -88,9 +92,9 @@ public class Assembler {
     private boolean isDirective(String toCheck) {
         boolean found = false;
         int idx = 0;
-        while (idx < this.asmDirectives.length && !found)
+        while (idx < ASM_DIRECTIVES.length && !found)
         {
-            if (toCheck.equals(this.asmDirectives[idx]))
+            if (toCheck.equals(ASM_DIRECTIVES[idx]))
             {
                 found = true;
             }
@@ -157,7 +161,7 @@ public class Assembler {
         }
     }
 
-    public boolean assemble(String filename) throws Exception {
+    public void assemble(String filename) throws Exception {
         // an overloaded version of parseFile that allows us to call the function with a filename
         // this is for the case where we didn't pass a filename to the constructor
         try {
@@ -166,10 +170,10 @@ public class Assembler {
             System.out.println(e.toString());
         }
 
-        return this.assemble();
+        this.assemble();
     }
 
-    boolean assemble() throws Exception {
+    private void assemble() throws Exception {
         // parses the ASM file this.asmIn
 
         int lineNumber = 1;
@@ -196,7 +200,7 @@ public class Assembler {
                         if (InstructionParser.isMnemonic(lineData[0])) {
                             // check to see if lineData[1] is a symbol name; if so, add it to the relocation table
                             if (lineData.length > 1) {
-                                if (lineData[1].matches("(?!\\$)(#?\\.?[a-zA-Z_]+[0-9a-zA-Z_]*)")) {
+                                if (lineData[1].matches(SYMBOL_NAME_REGEX)) {
                                     // if we have the address-of-symbol operator (#), skip it
                                     if (lineData[1].charAt(0) == '#') {
                                         lineData[1] = lineData[1].substring(1);
@@ -223,23 +227,22 @@ public class Assembler {
                         }
                         // finally, check to see if we have an assembler directive
                         else if (isDirective(lineData[0])) {
+                            // get the directive as a string to make the code easier to read
+                            String directive = lineData[0].toLowerCase();
+
                             // .org directive
-                            if (lineData[0].toLowerCase().equals(".org")) {
-                                // check to see if we have data in our current buffer
-                                if (this.buffer.length > 0) {
-                                    // create a new bank and add it to our banks
-                                    this.banks.add(new Bank(this.currentOrigin, this.buffer));
-
-                                    // clear the buffer
-                                    this.buffer = new byte[]{};
-                                }
-
-                                // get the new origin and update currentOrigin and currentOffset
-                                this.currentOrigin = InstructionParser.parseNumber(lineData[1]);
-                                this.currentOffset = 0;
-
-                                // we should also update the parent symbol because we are in a new segment
-                                this.parentSymbolName = null;
+                            if (directive.equals(".org")) {
+                                this.handleOrg(lineData);
+                            } else if (directive.equals(".db") || directive.equals(".byte")) {
+                                // todo: reserve bytes (8 bits)
+                            } else if (directive.equals(".dw") || directive.equals(".word")) {
+                                // todo: reserve words (16 bits)
+                            } else if (directive.equals(".rsset")) {
+                                this.handleRSSet(lineData);
+                            } else if (directive.equals(".rs")) {
+                                this.handleRS(lineData);
+                            } else {
+                                throw new Exception("Invalid assembler directive");
                             }
                         }
                         // otherwise, it is a symbol name
@@ -304,9 +307,80 @@ public class Assembler {
         {
             throw new IOException("No file to parse");
         }
-
-        return true;
     }
+
+    /*
+
+    Assembly methods
+
+     */
+
+    private void handleOrg(String[] lineData) throws Exception {
+        // Handles a .org directive
+
+        // check to see if we have data in our current buffer
+        if (this.buffer.length > 0) {
+            // create a new bank and add it to our banks
+            this.banks.add(new Bank(this.currentOrigin, this.buffer));
+
+            // clear the buffer
+            this.buffer = new byte[]{};
+        }
+
+        // get the new origin and update currentOrigin and currentOffset
+        this.currentOrigin = InstructionParser.parseNumber(lineData[1]);
+        this.currentOffset = 0;
+
+        // we should also update the parent symbol because we are in a new segment
+        this.parentSymbolName = null;
+    }
+
+    private void handleRSSet(String[] lineData) throws Exception {
+        // Handles the .rsset directive
+
+        if (lineData[1].charAt(0) == '#') {
+            throw new Exception("Invalid directive syntax");
+        } else {
+            this.rsAddress = InstructionParser.parseNumber(lineData[1]);
+        }
+    }
+
+    private void handleRS(String[] lineData) throws Exception {
+        /*
+
+        Reserves a specified number of bytes of memory with a label
+        The syntax is:
+            .rs <num_byes> <label>
+
+         */
+
+        if (lineData.length > 2) {
+            int numBytes = Integer.parseInt(lineData[1]);
+            if (numBytes > 0) {
+                String name = lineData[2];
+
+                // ensure our name follows the appropriate guidelines (and doesn't start with a #)
+                if (name.matches(SYMBOL_NAME_REGEX) && (name.charAt(0) != '#')) {
+                    // add the symbol
+                    name = this.getFullSymbolName(name);
+                    this.symbolTable.put(name, new AssemblerSymbol(name, this.rsAddress));
+                    this.rsAddress += numBytes;  // advance rsAddress by the number of bytes in the symbol
+                } else {
+                    throw new Exception("Invalid symbol name");
+                }
+            }  else {
+                throw new Exception("Bytes to reserve must be a positive integer");
+            }
+        } else {
+            throw new Exception("Invalid directive syntax");
+        }
+    }
+
+    /*
+
+    Constructors
+
+     */
 
     public Assembler() {
         // default constructor
@@ -316,7 +390,8 @@ public class Assembler {
         this.symbolTable = new Hashtable<>();
         this.relocationTable = new Vector<>();
         this.buffer = new byte[]{};
-        this.currentOrigin = (short)0x8000;
+        this.currentOrigin = (short)0x8000; // default program origin is 0x8000
+        this.rsAddress = (short)0x0200;  // default rs origin is 0x0200
         this.banks = new Vector<>();
     }
 
