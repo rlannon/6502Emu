@@ -3,13 +3,10 @@ package assembler;
 class InstructionParser {
     // A class to parse instructions
 
-    private static final String ZERO_PATTERN = "\\$[0-fF][0-fF],? ?[xXyY]?";
-    private static final String ZERO_X = "\\$[0-fF][0-fF], [xX]";
-    private static final String ZERO_Y = "\\$[0-fF][0-fF], [yY]";
-    private static final String ABSOLUTE_PATTERN = "([a-zA-Z_]+[0-9a-zA-Z_]+)|(\\$[0-fF]+)";
-    private static final String ABSOLUTE_INDEXED_PATTERN = "[a-zA-Z_]+[0-9a-zA-Z_]+, [xXyY]";
-    private static final String INDIRECT_Y_PATTERN = "\\([a-zA-Z_]+[0-9a-zA-Z_]+\\), [yY]";
-    private static final String INDIRECT_X_PATTERN = "\\([a-zA-Z_]+[0-9a-zA-Z_]+, [xX]\\)";
+    private static final String ZERO_PATTERN = "\\$[0-fF][0-fF],?";
+    private static final String ABSOLUTE_PATTERN = "([a-zA-Z_]+[0-9a-zA-Z_]+)|(\\$[0-fF][0-fF][0-fF][0-fF],?)";    // either a label or an address
+    private static final String INDIRECT_Y_PATTERN = "\\([a-zA-Z_]+[0-9a-zA-Z_]+\\),";  // must be followed by "Y"
+    private static final String INDIRECT_X_PATTERN = "\\([a-zA-Z_]+[0-9a-zA-Z_]+,"; // must be followed by "X)"
 
     private static final Instruction[] OPCODES = {
             /* Immediate, Zero, ZeroX, ZeroY, Absolute, AbsoluteX, AbsoluteY, Indirect, IndirectX, IndirectY, Single, Relative */
@@ -167,9 +164,12 @@ class InstructionParser {
                     numString = numString.substring(0, numString.length() - 1);
                 }
 
-                if (numString.charAt(numString.length() - 1) == ')') {
+                char lastChar = numString.charAt(numString.length() - 1);
+                // we may have an indirect mode (e.g., ($00), Y )
+                if (lastChar == ')') {
                     numString = numString.substring(0, numString.length() - 1);
-                } else {
+                } else if (!Character.toString(lastChar).matches("[0-9a-fA-F]")) {
+                    // if the last character is not a valid hex number, then we have a syntax error
                     throw new Exception("Invalid syntax");
                 }
             }
@@ -215,13 +215,19 @@ class InstructionParser {
                 }
                 else if (data[1].matches(ZERO_PATTERN))
                 {
-                    if (data[1].matches(ZERO_X))
+                    if (data[1].charAt(data[1].length() - 1) == ',')
                     {
-                        return AddressingMode.ZeroPageX;
-                    }
-                    else if (data[1].matches(ZERO_Y))
-                    {
-                        return AddressingMode.ZeroPageY;
+                        if (data.length == 3) {
+                            if (data[2].toUpperCase().equals("X")) {
+                                return AddressingMode.ZeroPageX;
+                            } else if (data[2].toUpperCase().equals("Y")) {
+                                return AddressingMode.ZeroPageY;
+                            } else {
+                                throw new Exception("Invalid addressing mode!");
+                            }
+                        } else {
+                            throw new Exception("Expected index");
+                        }
                     }
                     else
                     {
@@ -230,17 +236,21 @@ class InstructionParser {
                 }
                 else if (data[1].matches(ABSOLUTE_PATTERN))
                 {
-                    return AddressingMode.Absolute;
-                }
-                else if (data[1].matches(ABSOLUTE_INDEXED_PATTERN))
-                {
-                    if (data[1].toLowerCase().charAt(data[1].length() - 1) == 'x')
+                    // if it ends in a comma, then we have absolute indexed
+                    if (data[1].charAt(data[1].length() - 1) == ',')
                     {
-                        return AddressingMode.AbsoluteX;
-                    }
-                    else
-                    {
-                        return AddressingMode.AbsoluteY;
+                        if (data[2].toUpperCase().equals("X"))
+                        {
+                            return AddressingMode.AbsoluteX;
+                        }
+                        else if (data[2].toUpperCase().equals("Y"))
+                        {
+                            return AddressingMode.AbsoluteY;
+                        } else {
+                            throw new Exception("Invalid addressing mode");
+                        }
+                    } else {
+                        return AddressingMode.Absolute; // otherwise, it's just plain old absolute
                     }
                 }
                 else if (data[0].toUpperCase().equals("JMP") && data[1].matches("\\(.+\\)"))
@@ -250,11 +260,18 @@ class InstructionParser {
                 }
                 else if (data[1].matches(INDIRECT_Y_PATTERN))
                 {
-                    return AddressingMode.IndirectY;
+                    if (data[2].toUpperCase().equals("Y")) {
+                        return AddressingMode.IndirectY;
+                    } else {
+                        throw new Exception("Invalid addressing mode syntax");
+                    }
                 }
                 else if (data[1].matches(INDIRECT_X_PATTERN))
                 {
-                    return AddressingMode.IndirectX;
+                    if (data[2].toUpperCase().equals("X)"))
+                        return AddressingMode.IndirectX;
+                    else
+                        throw new Exception("Invalid addressing mode syntax");
                 }
                 // if the first character is a #, then it's immediate
                 else if (data[1].charAt(0) == '#')

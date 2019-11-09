@@ -43,6 +43,7 @@ public class Assembler {
     // bank and data buffer
     private Vector<Bank> banks;
     private byte[] buffer;  // a buffer to hold our bytecode until we hit a new segment or the end of the file
+    // todo: make 'buffer' into a vector since it is being updated so much?
 
     // Symbols
     private String parentSymbolName;    // the name of the current parent symbol (allows for .sym)
@@ -55,6 +56,22 @@ public class Assembler {
     Methods
 
      */
+
+    private void copyToBuffer(byte[] toCopy) {
+        // adds the contents of array 'toCopy' to our buffer
+
+        // first, create a new array of the appropriate size
+        byte[] bankData = new byte[this.buffer.length + toCopy.length];
+
+        // copy the contents
+        // copy the data from the buffer into bankData
+        System.arraycopy(this.buffer, 0, bankData, 0, this.buffer.length);
+        // now, copy the definedBytes into bankData where we left off
+        System.arraycopy(toCopy, 0, bankData, this.buffer.length, toCopy.length);
+
+        // finally, set 'buffer' equal to 'bankData' (to update the buffer)
+        this.buffer = bankData;
+    }
 
     private String getFullSymbolName(String symName) throws Exception {
         /*
@@ -217,32 +234,37 @@ public class Assembler {
 
                             // get our instruction data, update the offset, and add the bytes to our bytecode buffer
                             byte[] instructionData = InstructionParser.parseInstruction(lineData);
-                            byte[] bytecode = new byte[this.buffer.length + instructionData.length];
-                            System.arraycopy(this.buffer, 0, bytecode, 0, this.buffer.length);
-                            System.arraycopy(instructionData, 0, bytecode, this.buffer.length, instructionData.length);
-                            this.buffer = bytecode;
+                            this.copyToBuffer(instructionData);
 
                             // update the offset
                             this.currentOffset += instructionData.length;   // increase our offset
                         }
-                        // finally, check to see if we have an assembler directive
+                        // check to see if we have an assembler directive
                         else if (isDirective(lineData[0])) {
                             // get the directive as a string to make the code easier to read
                             String directive = lineData[0].toLowerCase();
 
                             // .org directive
-                            if (directive.equals(".org")) {
-                                this.handleOrg(lineData);
-                            } else if (directive.equals(".db") || directive.equals(".byte")) {
-                                // todo: reserve bytes (8 bits)
-                            } else if (directive.equals(".dw") || directive.equals(".word")) {
-                                // todo: reserve words (16 bits)
-                            } else if (directive.equals(".rsset")) {
-                                this.handleRSSet(lineData);
-                            } else if (directive.equals(".rs")) {
-                                this.handleRS(lineData);
-                            } else {
-                                throw new Exception("Invalid assembler directive");
+                            switch (directive) {
+                                case ".org":
+                                    this.handleOrg(lineData);
+                                    break;
+                                case ".db":
+                                case ".byte":
+                                    this.defineByte(lineData);
+                                    break;
+                                case ".dw":
+                                case ".word":
+                                    this.defineWords(lineData);
+                                    break;
+                                case ".rsset":
+                                    this.handleRSSet(lineData);
+                                    break;
+                                case ".rs":
+                                    this.reserveBytes(lineData);
+                                    break;
+                                default:
+                                    throw new Exception("Invalid assembler directive");
                             }
                         }
                         // otherwise, it is a symbol name
@@ -282,6 +304,7 @@ public class Assembler {
                     // increment our line number
                     lineNumber++;
                 } catch (Exception e) {
+                    // if an exception occurred during assembly, catch it, add the line number, and throw a new one
                     throw new Exception("Error on line " + lineNumber + ": " + e.toString());
                 }
             }
@@ -311,7 +334,9 @@ public class Assembler {
 
     /*
 
-    Assembly methods
+    Assembler directives
+
+    All of the following functions handle assembler directives and their functionality.
 
      */
 
@@ -345,7 +370,7 @@ public class Assembler {
         }
     }
 
-    private void handleRS(String[] lineData) throws Exception {
+    private void reserveBytes(String[] lineData) throws Exception {
         /*
 
         Reserves a specified number of bytes of memory with a label
@@ -373,6 +398,80 @@ public class Assembler {
             }
         } else {
             throw new Exception("Invalid directive syntax");
+        }
+    }
+
+    private void defineByte(String[] lineData) throws Exception {
+        /*
+
+        Defines a byte, or series of bytes
+
+        Proper syntax is:
+            .db <byte>, <byte>, ... <byte>
+        Each byte should be given with a hexadecimal or binary prefix. The '#' prefix is not allowed
+
+         */
+
+        // the number of bytes will be equal to the length of the data - the directive
+        int numBytes = lineData.length - 1;
+        if (numBytes == 0) {
+            throw new Exception("Must define bytes");
+        } else {
+            // create an array to store the defined bytes
+            byte[] definedBytes = new byte[numBytes];
+
+            // iterate through our string array and lay down bytes
+            for (int i = 1; i < lineData.length; i++) {
+                // parse the number there
+                if (lineData[i].charAt(0) == '#') {
+                    throw new Exception("Invalid syntax");
+                } else {
+                    // fetch our number
+                    byte data = (byte)(InstructionParser.parseNumber(lineData[i]) & 0xFF);
+                    definedBytes[i - 1] = data;
+
+                    // increment the offset to account for the data
+                    this.currentOffset += 1;
+                }
+            }
+
+            // now, copy 'definedBytes' into our bank
+            this.copyToBuffer(definedBytes);
+        }
+    }
+
+    private void defineWords(String[] lineData) throws Exception {
+        // Defines a word, or a series of words
+
+        int numWords = lineData.length - 1;
+        if (numWords == 0) {
+            throw new Exception("Must define words");
+        } else {
+            // create an array to store the defined words *in little-endian format*
+            byte[] definedWords = new byte[2 * numWords];
+
+            // iterate through our string and lay down our bytes
+            for (int i = 1, arrIndex = 0; i < lineData.length; i++, arrIndex += 2) {
+                // parse the number there
+                if (lineData[i].charAt(0) == '#') {
+                    throw new Exception("Invalid syntax");
+                } else {
+                    // fetch the number
+                    short num = InstructionParser.parseNumber(lineData[i]);
+                    byte numLow = (byte)(num & 0xFF);
+                    byte numHigh = (byte)((num >> 8) & 0xFF);
+
+                    // add the bytes (low, high) to the array
+                    definedWords[arrIndex] = numLow;
+                    definedWords[arrIndex + 1] = numHigh;
+
+                    // update our offset
+                    this.currentOffset += 2;
+                }
+            }
+
+            // finally, copy our words to the buffer
+            this.copyToBuffer(definedWords);
         }
     }
 
