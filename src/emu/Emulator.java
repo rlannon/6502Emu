@@ -8,7 +8,7 @@ import java.awt.event.*;
 public class Emulator implements KeyListener {
     private CPU cpu;    // the CPU we are running; automatically creates debugger
     private Assembler assemble; // the Assembler we are using
-    Vector<Input> inputs;   // user inputs; these are configurable
+    private Vector<Input> inputs;   // user inputs; these are configurable
 
     public void keyTyped(KeyEvent e) {
         System.out.println(e.getID() + " typed!");
@@ -101,6 +101,11 @@ public class Emulator implements KeyListener {
         }
     }
 
+    void reset() {
+        // Resets the CPU
+        this.cpu.signal(Signal.RESET);
+    }
+
     void coreDump() throws Exception {
         if (this.cpu.debugMode) {
             this.cpu.debugger.generateCoreDump();
@@ -110,7 +115,10 @@ public class Emulator implements KeyListener {
     }
 
     Emulator() {
+        // create and reset our CPU
         this.cpu = new CPU();
+        this.reset();
+
         this.assemble = new Assembler();
         this.inputs = new Vector<>();
     }

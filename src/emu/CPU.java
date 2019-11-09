@@ -78,7 +78,7 @@ public class CPU {
 
     /*
 
-    Methods
+    Status Register Methods
 
      */
 
@@ -219,11 +219,10 @@ public class CPU {
         Instruction execution uses a switch statement to dispatch functions
 
          */
-        switch (opcode)
-        {
+        switch (opcode) {
             // BRK
             case 0x00:
-                this.halted = true;
+                this.signal(Signal.BRK);
                 break;
 
             // NOP
@@ -584,37 +583,31 @@ public class CPU {
 
             // EOR: Immediate
             case 0x49:
-                this.a ^= this.fetchImmediateByte();
-                this.updateNZFlags(this.a);
+                this.xor(this.fetchImmediateByte());
                 break;
             // EOR: Zero Page
             // EOR: Zero Page, X
             case 0x45:
             case 0x55:
-                this.a ^= this.fetchByteFromMemory(this.fetchImmediateByte(), (opcode == 0x45) ? 0 : this.x);
-                this.updateNZFlags(this.a);
+                this.xor(this.fetchByteFromMemory(this.fetchImmediateByte(), (opcode == 0x45) ? 0 : this.x));
                 break;
             // EOR: Absolute
             case 0x4D:
-                this.a ^= this.fetchByteFromMemory(this.fetchImmediateShort());
-                this.updateNZFlags(this.a);
+                this.xor(this.fetchByteFromMemory(this.fetchImmediateShort()));
                 break;
             // EOR: Absolute, X
             // EOR: Absolute, Y
             case 0x5D:
             case 0x59:
-                this.a ^= this.fetchByteFromMemory(this.fetchImmediateShort(), (opcode == 0x5D) ? this.x : this.y);
-                this.updateNZFlags(this.a);
+                this.xor(this.fetchByteFromMemory(this.fetchImmediateShort(), (opcode == 0x5D) ? this.x : this.y));
                 break;
             // EOR: Indirect X
             case 0x41:
-                this.a ^= this.fetchIndirectX();
-                this.updateNZFlags(this.a);
+                this.xor(this.fetchIndirectX());
                 break;
             // EOR: Indirect Y
             case 0x51:
-                this.a ^= this.fetchIndirectY();
-                this.updateNZFlags(this.a);
+                this.xor(this.fetchIndirectY());
                 break;
 
             /*
@@ -1368,6 +1361,7 @@ public class CPU {
     private void and(int operand) {
         // performs logical and on a + operand and sets N and Z flags accordingly
 
+        operand &= 0xFF;
         this.a &= operand;
         this.updateNZFlags(this.a);
     }
@@ -1375,7 +1369,16 @@ public class CPU {
     private void or(int operand) {
         // performs logical and on a + operand and sets N and Z flags accordingly
 
+        operand &= 0xFF;
         this.a |= operand;
+        this.updateNZFlags(this.a);
+    }
+
+    private void xor(int operand) {
+        // performs a logical xor on a + operand and sets N and Z flags accordingly
+
+        operand &= 0xFF;
+        this.a ^= operand;
         this.updateNZFlags(this.a);
     }
 
@@ -1500,9 +1503,79 @@ public class CPU {
         return this.memory[address];
     }
 
-    // Constructors and setup methods
+    /*
 
-    public void reset() {
+    Signals and interrupts
+
+     */
+
+    private void interrupt(int vector) {
+        /*
+
+        Triggers an interrupt
+
+        The process is as follows:
+            - Push high byte of PC
+            - Push low byte of PC
+            - Push status
+            - Obtains the address of the interrupt handler from 'vector'
+
+         */
+
+        vector &= 0xFFFF;
+
+        // push high byte, low byte of the program counter
+        this.pushToStack((byte)((this.pc >> 8) & 0xFF));
+        this.pushToStack((byte)(this.pc & 0xFF));
+
+        // push status
+        this.pushToStack(this.status);
+
+        // transfer control
+        this.pc = this.memory[vector];
+    }
+
+    void signal(Signal signal) {
+        // Sends a signal to the processor
+
+        // todo: is it possible to limit what parameters can be passed
+
+        int vector;
+        switch (signal) {
+            case NMI:
+                this.clearFlag(Status.B);
+                vector = ((NMI_HIGH << 8) | NMI_LOW) & 0xFFFF;
+                this.interrupt(vector);
+                break;
+            case RESET:
+                this.reset();
+                break;
+            case IRQ:
+                // If the IRQ disable flag is set, do nothing
+                if (this.isSet(Status.INTERRUPT_DISABLE)) {
+                    break;
+                } else {
+                    this.setFlag(Status.INTERRUPT_DISABLE);
+                    this.clearFlag(Status.B);
+                    vector = ((IRQ_HIGH << 8) | IRQ_LOW) & 0xFFFF;
+                    this.interrupt(vector);
+                }
+                break;
+            case BRK:
+                // this emulator will use BRK as a "halt"
+                this.setFlag(Status.B);
+                this.halted = true;
+                break;
+        }
+    }
+
+    /*
+
+    Constructors and setup methods
+
+     */
+
+    private void reset() {
         this.status = (byte)0b00110000; // initialize status register
         this.sp = (byte)0xff;    // stack register should be initialized to 0xff (grows downwards)
         this.pc = (this.memory[RESET_HIGH] << 8 | this.memory[RESET_LOW]) & 0xFFFF; // obtain the reset address from the reset vector
@@ -1510,7 +1583,7 @@ public class CPU {
         this.setFlag(Status.INTERRUPT_DISABLE); // a system reset should disable interrupts
     }
 
-    public void loadBinFile(String emuFilename) throws Exception {
+    void loadBinFile(String emuFilename) throws Exception {
         // initialize CPU memory using an emu file
 
         EmuFile emu = EmuFile.loadEmuFile(emuFilename);

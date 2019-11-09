@@ -10,7 +10,7 @@ public class Debugger {
 
     private CPU cpu;
     private boolean paused;   // whether we have stoped the CPU
-    boolean[] pagesUsed;    // tracks which pages have been touched by the CPU
+    private boolean[] pagesUsed;    // tracks which pages have been touched by the CPU
     Hashtable<Integer, Boolean> breakpoints;  // the breakpoints we have set
 
     /*
@@ -46,7 +46,7 @@ public class Debugger {
 
     */
 
-    public void pause() {
+    void pause() {
         // temporarily halts the CPU
         this.paused = true;
     }
@@ -71,7 +71,7 @@ public class Debugger {
         return this.cpu.halted;
     }
 
-    public void step() throws Exception {
+    void step() throws Exception {
         // steps the CPU one time
         this.cpu.step();
     }
@@ -84,7 +84,7 @@ public class Debugger {
 
      */
 
-    public void generateCoreDump() {
+    void generateCoreDump() {
         // Generates a core dump for the cpu, saving it to 'core.bin'
 
         // Each page will start with { 0xFF, 0xFF, ADDR_HIGH, ADDR_LOW }
@@ -116,6 +116,7 @@ public class Debugger {
         }
     }
 
+    // todo: determine whether these fetch functions are really necessary given the emulator is in the package
     public byte[] getMemory() {
         return this.cpu.memory;
     }
@@ -151,14 +152,15 @@ public class Debugger {
     */
 
     private Debugger() {
-        // default constructor
         this.paused = false;
         this.pagesUsed = new boolean[256];  // all initialized to false
-        this.pagesUsed[1] = true;   // we will always put the stack in a core dump
+        this.pagesUsed[1] = true;   // we will always include the stack in a core dump
         this.breakpoints = new Hashtable<>();
     }
 
     Debugger(CPU cpu) {
+        // The debugger _must_ be initialized with a CPU
+
         this();
         this.cpu = cpu;
     }
