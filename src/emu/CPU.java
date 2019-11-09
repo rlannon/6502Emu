@@ -84,7 +84,7 @@ public class CPU {
 
     // Flag access
 
-    boolean isSet(byte flag) {
+    private boolean isSet(byte flag) {
         return (this.status & flag) == flag;
     }
 
@@ -708,7 +708,29 @@ public class CPU {
                 this.pc = ((addressHigh & 0xFF) << 8) | (addressLow & 0xFF);
                 break;
 
-            // todo: implement more instructions
+            /*
+
+            JSR
+            Jump to Subroutine
+
+            Pushes (return address - 1) onto the stack (push high, then push low) and jumps to the address given
+
+             */
+
+            case 0x20:
+                // Fetch the address to jump to and the return address
+                address = this.fetchImmediateShort() & 0xFFFF;
+                int returnAddress = this.pc - 1;
+                byte returnLow = (byte)(returnAddress & 0xFF);
+                byte returnHigh = (byte)((returnAddress >> 8) & 0xFF);
+
+                // write the return address to the stack
+                this.pushToStack(returnHigh);
+                this.pushToStack(returnLow);
+
+                // transfer control to 'address'
+                this.pc = address;
+                break;
 
             /*
 
@@ -820,7 +842,299 @@ public class CPU {
                 this.updateNZFlags(this.y);
                 break;
 
-            // todo: implement instructions between LDY and STA
+            /*
+
+            LSR
+            Logical shift right
+
+            Shifts some memory (or A) to the right one position.
+            0 is shifted into bit 7 and the original bit zero is shifted in to the carry flag
+            Since 0 is shifted into bit 7, this will always clear the N flag
+
+            Note this instruction can use the accumulator addressing mode, like 'lsr a'
+
+            Affects flags N, Z, C
+
+             */
+
+            // LSR: Accumulator
+            case 0x4A:
+                boolean carry = (this.a & 0x01) == 1;
+                this.a >>= 1;   // shift right by one bit
+                this.a &= 0x7F; // ensure bit 7 is 0
+
+                // Set/clear the C flag depending on bit
+                if (carry)
+                    this.setFlag(Status.CARRY);
+                else
+                    this.clearFlag(Status.CARRY);
+
+                // clear the N flag
+                this.clearFlag(Status.NEGATIVE);
+
+                // set or clear the Z flag
+                if (this.a == 0)
+                    this.setFlag(Status.ZERO);
+                else
+                    this.clearFlag(Status.ZERO);
+                break;
+            // LSR: Zero Page
+            // LSR: Zero Page, X
+            case 0x46:
+            case 0x56:
+                address = ((this.fetchImmediateByte() & 0xFF) + ((opcode == 0x46) ? 0 : this.x)) & 0xFF;
+                this.shiftRight(address);
+                break;
+            // LSR: Absolute
+            // LSR: Absolute, X
+            case 0x4E:
+            case 0x5E:
+                address = ((this.fetchImmediateShort() & 0xFFFF) + ((opcode == 0x4E) ? 0 : this.x)) & 0xFFFF;
+                this.shiftRight(address);
+                break;
+
+            /*
+
+            ORA
+            Bitwise OR with Accumulator
+
+            Operates like EOR or AND, performing bit logic with the accumulator and some value.
+
+            Affects flags N, Z based on the result
+
+             */
+
+            // ORA: Immediate
+            case 0x09:
+                this.or(this.fetchImmediateByte() & 0xFF);
+                break;
+            // ORA: ZP
+            // ORA: ZP, X
+            case 0x05:
+            case 0x15:
+                this.or(this.fetchByteFromMemory((this.fetchImmediateByte() & 0xFF), ((opcode == 0x05) ? 0 : this.x)) & 0xFF);
+                break;
+            // ORA: Absolute
+            case 0x0D:
+                this.or(this.fetchByteFromMemory(this.fetchImmediateShort() & 0xFFFF));
+                break;
+            // ORA: Absolute, X
+            // ORA: Absolute, Y
+            case 0x1D:
+            case 0x19:
+                this.or(this.fetchByteFromMemory(this.fetchImmediateShort() & 0xFFFF, (opcode == 0x1D) ? this.x : this.y));
+                break;
+            // ORA: Indirect, X
+            case 0x01:
+                this.or(this.fetchIndirectX());
+                break;
+            // ORA: Indirect, Y
+            case 0x11:
+                this.or(this.fetchIndirectY());
+                break;
+
+            /*
+
+            Register Instructions
+
+            These instructions are all implied mode
+
+             */
+
+            // TAX
+            case 0xAA:
+                this.x = this.a;
+                break;
+            // TXA
+            case 0x8A:
+                this.a = this.x;
+                break;
+            // DEX
+            case 0xCA:
+                this.x--;
+                break;
+            // INX
+            case 0xE8:
+                this.x++;
+                break;
+            // TAY
+            case 0xA8:
+                this.y = this.a;
+                break;
+            // TYA
+            case 0x98:
+                this.a = this.y;
+                break;
+            // DEY
+            case 0x88:
+                this.y--;
+                break;
+            // INY
+            case 0xC8:
+                this.y++;
+                break;
+
+            /*
+
+            ROR
+            Rotate Right
+
+            Shifts all bits right one position. The Carry is shifted into bit 7 and the original bit 0 is shifted into Carry
+
+            Affects flags N, Z, C
+
+             */
+
+            // ROR: Accumulator
+            case 0x6A:
+                boolean b0 = (this.a &= 0x01) != 0;
+                this.a >>= 1;
+
+                if (this.isSet(Status.CARRY))
+                    this.a |= 0x80;
+
+                if (b0)
+                    this.setFlag(Status.CARRY);
+                else
+                    this.clearFlag(Status.CARRY);
+                break;
+            // ROR: ZP
+            // ROR: ZP, X
+            case 0x66:
+            case 0x76:
+                address = (this.fetchImmediateByte() + ((opcode == 0x66) ? 0 : this.x & 0xFF)) & 0xFF;
+                this.rotateRight(address);
+                break;
+            // ROR: Absolute
+            // ROR: Absolute, X
+            case 0x6E:
+            case 0x7E:
+                address = (this.fetchImmediateShort() + ((opcode == 0x6E) ? 0 : this.x & 0xFF)) &  0xFFFF;
+                this.rotateRight(address);
+                break;
+
+            /*
+
+            ROL
+            Rotate Left
+
+            Shifts all bits left
+
+             */
+
+            // ROL: Accumulator
+            case 0x2A:
+                b7 = (this.a &= 0x80) != 0;
+                this.a <<= 1;
+
+                if (this.isSet(Status.CARRY))
+                    this.a |= 0x01;
+
+                if (b7)
+                    this.setFlag(Status.CARRY);
+                else
+                    this.clearFlag(Status.CARRY);
+                break;
+            // ROL: Zero Page
+            // ROL: Zero Page, X
+            case 0x26:
+            case 0x36:
+                address = (this.fetchImmediateByte() + ((opcode == 0x26) ? 0 : this.x & 0xFF)) & 0xFF;
+                this.rotateLeft(address);
+                break;
+            // ROL: Absolute
+            // ROL: Absolute, X
+            case 0x2E:
+            case 0x3E:
+                address = (this.fetchImmediateShort() + ((opcode == 0x2E) ? 0 : this.x & 0xFF)) &  0xFFFF;
+                this.rotateLeft(address);
+                break;
+
+            /*
+
+            RTI
+            Return from Interrupt
+
+            RTI retrieves the processor status flags and the PC from the stack in that order
+            Unlike RTS, the return address on the stack is the *actual address*, NOT (address - 1)
+
+            Affects all flags
+
+             */
+
+            case 0x40:
+                // get status
+                this.status = this.pullFromStack();
+
+                // get pc; remember we always push high, low
+                returnLow = this.pullFromStack();
+                returnHigh = this.pullFromStack();
+                this.pc = ((returnHigh << 8) & 0xFF00) | (returnLow & 0xFF);
+                break;
+
+            /*
+
+            RTS
+            Return from subroutine
+
+            Pulls the low byte, then the high byte, of the return address - 1.
+            It then adds 1 to get the proper return address.
+
+             */
+
+            case 0x60:
+                // fetch the low, then high bytes of the return address
+                returnLow = this.pullFromStack();
+                returnHigh = this.pullFromStack();
+
+                // todo: determine whether jumping to a subroutine with a return address of $6000 would push $FF, $60 or $FF, $5F
+
+                // pack them into the pc
+                this.pc = ((returnHigh << 8) & 0xFF00) | (returnLow & 0xFF);
+
+                // add one to ensure we return to the right place
+                this.pc += 1;
+                break;
+
+            /*
+
+            SBC
+            Subtract with carry
+
+            To subtract, set the carry before the operation. If the bit is cleared, it indicates a borrow occurred.
+
+            Affects flags N, V, Z, C
+
+             */
+
+            // SBC: Immediate
+            case 0xE9:
+                this.subtract(this.fetchImmediateByte());
+                break;
+            // SBC: ZP
+            // SBC: ZP, X
+            case 0xE5:
+            case 0xF5:
+                this.subtract(this.fetchByteFromMemory(this.fetchImmediateByte(), (opcode == 0xE5) ? 0 : this.x));
+                break;
+            // SBC: Absolute
+            case 0xED:
+                this.subtract(this.fetchByteFromMemory(this.fetchImmediateShort()));
+                break;
+            // SBC: Absolute, X
+            // SBC: Absolute, Y
+            case 0xFD:
+            case 0xF9:
+                this.subtract(this.fetchByteFromMemory(this.fetchImmediateShort(), (opcode == 0xFD) ? this.x: this.y));
+                break;
+            // SBC: Indirect X
+            case 0xE1:
+                this.subtract(this.fetchIndirectX());
+                break;
+            // SBC: Indirect Y
+            case 0xF1:
+                this.subtract(this.fetchIndirectY());
+                break;
 
             /*
 
@@ -909,27 +1223,19 @@ public class CPU {
                 break;
             // PHA
             case 0x48:
-                int stackAddress = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
-                this.memory[stackAddress] = this.a;
-                this.sp--;
+                this.pushToStack(this.a);
                 break;
             // PLA
             case 0x68:
-                this.sp++;
-                stackAddress = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
-                this.a = this.memory[stackAddress];
+                this.a = this.pullFromStack();
                 break;
             // PHP
             case 0x08:
-                stackAddress = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
-                this.memory[stackAddress] = this.status;
-                this.sp--;
+                this.pushToStack(this.status);
                 break;
             // PLP
             case 0x28:
-                this.sp++;
-                stackAddress = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
-                this.status = this.memory[stackAddress];
+                this.status = this.pullFromStack();
                 break;
 
             /*
@@ -1005,18 +1311,48 @@ public class CPU {
         // set the carry flag if necessary
         if (result > 0xFF) {
             this.setFlag(Status.CARRY);
-        } else {
-            this.updateNZFlags((byte)(result & 0xFF));
         }
 
         // set a to the result
         this.a = (byte)(result & 0xFF);
+        this.updateNZFlags(this.a);
+    }
+
+    private void subtract(int operand) {
+        // subtracts carry + a - operand and sets flags accordingly
+
+        if ((((this.a) ^ operand) & 0x80) != 0) {
+            this.setFlag(Status.OVERFLOW);
+        } else {
+            this.clearFlag(Status.OVERFLOW);
+        }
+
+        int result = 0xFF + (this.a & 0xFF) - operand + ((this.isSet(Status.CARRY)? 1 : 0));
+        if (result < 0x100) {
+            this.clearFlag(Status.CARRY);
+            if (this.isSet(Status.OVERFLOW) && result < 0x80)
+                this.clearFlag(Status.OVERFLOW);
+        } else {
+            this.setFlag(Status.CARRY);
+            if (this.isSet(Status.OVERFLOW) && result >= 0x180)
+                this.clearFlag(Status.OVERFLOW);
+        }
+
+        this.a = (byte)(result & 0xFF);
+        this.updateNZFlags(this.a);
     }
 
     private void and(int operand) {
-        // performs logical and on a + memory and sets N and Z flags accordingly
+        // performs logical and on a + operand and sets N and Z flags accordingly
 
         this.a &= operand;
+        this.updateNZFlags(this.a);
+    }
+
+    private void or(int operand) {
+        // performs logical and on a + operand and sets N and Z flags accordingly
+
+        this.a |= operand;
         this.updateNZFlags(this.a);
     }
 
@@ -1028,20 +1364,43 @@ public class CPU {
         this.memory[address] <<= 1;
 
         // update the flags
-        if (b7) this.setFlag(Status.CARRY); // shift bit 7 into carry
+        if (b7)
+            this.setFlag(Status.CARRY); // shift bit 7 into carry
+        else
+            this.clearFlag(Status.CARRY);
+
         this.updateNZFlags(this.memory[address]);
     }
 
     private void shiftRight(int address) {
-        // Shift the data at memory[address] right by one bit
-        boolean b0 = ((this.memory[address] & 0xFF) & 1) == 1;
+        // Performs a logical shift right on the data at the specified memory address
 
-        // perform the bitshift
+        boolean carry = (this.memory[address] & 0x01) == 1;
         this.memory[address] >>= 1;
 
-        // update the flags
-        if (b0) this.setFlag(Status.CARRY); // shift bit 0 into carry
+        // Set/clear the C flag depending on bit
+        if (carry)
+            this.setFlag(Status.CARRY);
+        else
+            this.clearFlag(Status.CARRY);
+
         this.updateNZFlags(this.memory[address]);
+    }
+
+    private void rotateLeft(int address) {
+        // Shifts all bits left one position, shifting carry into bit 0 and bit 7 into carry
+
+        boolean carry = this.isSet(Status.CARRY);
+        this.shiftLeft(address);
+        if (carry) this.memory[address] |= 0x01;
+    }
+
+    private void rotateRight(int address) {
+        // Identical to rotateLeft except that bits are shifted right
+
+        boolean carry = this.isSet(Status.CARRY);
+        this.shiftRight(address);
+        if (carry) this.memory[address] |= 0x80;
     }
 
     private void compare(short register, short value) {
@@ -1094,6 +1453,28 @@ public class CPU {
         byte offset = this.fetchImmediateByte();
         boolean branch = !this.isSet(flag);
         if (branch) this.pc += offset;
+    }
+
+    /*
+
+    Stack functions
+
+     */
+
+    private void pushToStack(byte data) {
+        // pushes a byte onto the stack
+
+        int address = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
+        this.memory[address] = data;
+        this.sp--;
+    }
+
+    private byte pullFromStack() {
+        // pulls a byte from the stack and returns it
+
+        this.sp++;
+        int address = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
+        return this.memory[address];
     }
 
     // Constructors and setup methods
