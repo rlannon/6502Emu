@@ -168,6 +168,7 @@ public class CPU {
         int addressLow = (this.memory[pointer]) & 0xFF;
         int addressHigh = (this.memory[pointer + 1]) & 0xFF;
         int address = ((addressHigh << 8) | addressLow) & 0xFFFF;
+        address += this.y & 0xFF;
         return this.memory[address];    // get the value at that address
     }
 
@@ -1186,10 +1187,14 @@ public class CPU {
             case 0x81:
                 // Handle an indexed indirect ($c0, x) fetch
                 // Looks at location $c0, x; obtains data and uses that (and the following byte) as the address
-                int base = this.fetchImmediateByte() & 0xFF;   // fetch the address
+                pointer = this.fetchImmediateByte() & 0xFF;   // fetch the address
+                pointer += this.x & 0xFF;
+
+                addressLow = this.memory[pointer] & 0xFF;
+                addressHigh = this.memory[pointer + 1] & 0xFF;
+                address = ((addressHigh << 8) | addressLow) & 0xFFFF;
 
                 // pointer is at location base + index
-                address = (this.memory[base + (this.x & 0xFF)]) | (this.memory[base + (this.x & 0xFF) + 1] << 8);
                 this.memory[address] = this.a;
                 break;
             // STA: Indirect Y
@@ -1198,7 +1203,10 @@ public class CPU {
                 // Looks at location $c0; goes to that location + y; gets that value
 
                 pointer = this.fetchImmediateByte() & 0xFF;   // fetch the pointer
-                address = (this.memory[pointer] + (this.y & 0xFF)) & 0xFFFF;   // go to the address indicated by the pointer, offset by index
+                addressLow = this.memory[pointer] & 0xFF;
+                addressHigh = this.memory[pointer + 1] & 0xFF;
+                address = ((addressHigh << 8) | addressLow) & 0xFFFF;
+                address += this.y & 0xFF;
                 this.memory[address] = this.a;
                 break;
 
