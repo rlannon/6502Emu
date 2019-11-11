@@ -1,32 +1,12 @@
 package emu;
 
 import assembler.Assembler;
-
 import java.util.Vector;
-import java.awt.event.*;
 
-public class Emulator implements KeyListener {
+public class Emulator {
     private CPU cpu;    // the CPU we are running; automatically creates debugger
     private Assembler assemble; // the Assembler we are using
     private Vector<Input> inputs;   // user inputs; these are configurable
-
-    public void keyTyped(KeyEvent e) {
-        System.out.println(e.getID() + " typed!");
-        if (e.isActionKey()) {
-            this.cpu.halted = true;
-        }
-    }
-
-    public void keyPressed(KeyEvent e) {
-        System.out.println(e.getID() + " pressed!");
-        if (e.isActionKey()) {
-            this.cpu.halted = true;
-        }
-    }
-
-    public void keyReleased(KeyEvent e) {
-        System.out.println(e.getID() + " released!");
-    }
 
     void assemble(String filename) throws Exception {
         // Assemble a file
@@ -114,7 +94,7 @@ public class Emulator implements KeyListener {
         }
     }
 
-    Emulator() {
+    public Emulator() {
         // create and reset our CPU
         this.cpu = new CPU();
         this.reset();
