@@ -23,7 +23,7 @@ public class Assembler {
 
     // some patterns
     private final static Pattern TO_IGNORE = Pattern.compile("[\\s]|(;.*)");
-    private final static String SYMBOL_NAME_REGEX = "(?!\\$)(#?\\.?[a-zA-Z_]+[0-9a-zA-Z_]*)";
+    private final static String SYMBOL_NAME_REGEX = "(?!\\$)(#?\\.?[a-zA-Z_]+[0-9a-zA-Z_]*,?)";
 
     /*
 
@@ -160,15 +160,15 @@ public class Assembler {
                         short refAddr = (short)(rSym.getBank() + rSym.getOffset());
                         byte offset = (byte)(labelAddr - refAddr - 2);
                         littleEndianAddressData = new byte[]{ offset };
-                    } else if (rSym.getAddressingMode() == AddressingMode.Absolute) {
+                    } else if ((rSym.getAddressingMode() == AddressingMode.Absolute) || (rSym.getAddressingMode() == AddressingMode.AbsoluteX) || (rSym.getAddressingMode() == AddressingMode.AbsoluteY)) {
                         // absolute requires the whole address
                         littleEndianAddressData = new byte[]{(byte) (asmSym.getData() & 0xFF), (byte) ((asmSym.getData() >> 8) & 0xFF)};
                     } else {
                         throw new Exception("Invalid addressing mode for label reference");
                     }
 
-                    // replace at offset + 1 to leave room for the opcode
-                    relocBank.setData(rSym.getOffset() + 1, littleEndianAddressData);
+                    // replace the byte at offset; if it is an instruction, then use offset + 1 to leave room for the instruction byte
+                    relocBank.setData(rSym.getOffset() + (rSym.isDefinition() ? 0 : 1), littleEndianAddressData);
                 } else {
                     throw new NullPointerException("Could not find referenced symbol");
                 }
@@ -218,17 +218,24 @@ public class Assembler {
                             // check to see if lineData[1] is a symbol name; if so, add it to the relocation table
                             if (lineData.length > 1) {
                                 if (lineData[1].matches(SYMBOL_NAME_REGEX)) {
+                                    String symName = lineData[1];
+
                                     // if we have the address-of-symbol operator (#), skip it
-                                    if (lineData[1].charAt(0) == '#') {
-                                        lineData[1] = lineData[1].substring(1);
+                                    if (symName.charAt(0) == '#') {
+                                        symName = symName.substring(1);
+                                    }
+
+                                    // if we have a comma at the end (indexed value), skip it
+                                    if (symName.charAt(symName.length() - 1) == ',') {
+                                        symName = symName.substring(0, symName.length() - 1);
                                     }
 
                                     // if we have a ., get the parent label
-                                    if (lineData[1].charAt(0) == '.') {
-                                        lineData[1] = getFullSymbolName(lineData[1]);
+                                    if (symName.charAt(0) == '.') {
+                                        symName = getFullSymbolName(symName);
                                     }
 
-                                    this.relocationTable.add(new RelocationSymbol(lineData[1], this.currentOrigin, this.currentOffset, InstructionParser.getAddressingMode(lineData)));
+                                    this.relocationTable.add(new RelocationSymbol(symName, this.currentOrigin, this.currentOffset, InstructionParser.getAddressingMode(lineData)));
                                 }
                             }
 
@@ -422,17 +429,22 @@ public class Assembler {
 
             // iterate through our string array and lay down bytes
             for (int i = 1; i < lineData.length; i++) {
-                // parse the number there
-                if (lineData[i].charAt(0) == '#') {
-                    throw new Exception("Invalid syntax");
+                if (lineData[i].matches(SYMBOL_NAME_REGEX)) {
+                    // todo: allow zero-page addresses?
+                    throw new Exception("Symbols not allowed here; must be a single byte");
                 } else {
-                    // fetch our number
-                    byte data = (byte)(InstructionParser.parseNumber(lineData[i]) & 0xFF);
-                    definedBytes[i - 1] = data;
-
-                    // increment the offset to account for the data
-                    this.currentOffset += 1;
+                    // parse the number there
+                    if (lineData[i].charAt(0) == '#') {
+                        throw new Exception("Invalid syntax");
+                    } else {
+                        // fetch our number
+                        byte data = (byte) (InstructionParser.parseNumber(lineData[i]) & 0xFF);
+                        definedBytes[i - 1] = data;
+                    }
                 }
+
+                // increment the offset to account for the data
+                this.currentOffset += 1;
             }
 
             // now, copy 'definedBytes' into our bank
@@ -452,22 +464,32 @@ public class Assembler {
 
             // iterate through our string and lay down our bytes
             for (int i = 1, arrIndex = 0; i < lineData.length; i++, arrIndex += 2) {
-                // parse the number there
-                if (lineData[i].charAt(0) == '#') {
-                    throw new Exception("Invalid syntax");
+                if (lineData[i].matches(SYMBOL_NAME_REGEX)) {
+                    // add this memory address to the relocation table
+                    String fullSymbolName = this.getFullSymbolName(lineData[i]);
+                    this.relocationTable.add(new RelocationSymbol(fullSymbolName, this.currentOrigin, this.currentOffset, AddressingMode.Absolute, true));
+
+                    // temporarily store 0 here
+                    definedWords[arrIndex] = 0;
+                    definedWords[arrIndex + 1] = 0;
                 } else {
-                    // fetch the number
-                    short num = InstructionParser.parseNumber(lineData[i]);
-                    byte numLow = (byte)(num & 0xFF);
-                    byte numHigh = (byte)((num >> 8) & 0xFF);
+                    // parse the number there
+                    if (lineData[i].charAt(0) == '#') {
+                        throw new Exception("Invalid syntax");
+                    } else {
+                        // fetch the number
+                        short num = InstructionParser.parseNumber(lineData[i]);
+                        byte numLow = (byte) (num & 0xFF);
+                        byte numHigh = (byte) ((num >> 8) & 0xFF);
 
-                    // add the bytes (low, high) to the array
-                    definedWords[arrIndex] = numLow;
-                    definedWords[arrIndex + 1] = numHigh;
-
-                    // update our offset
-                    this.currentOffset += 2;
+                        // add the bytes (low, high) to the array
+                        definedWords[arrIndex] = numLow;
+                        definedWords[arrIndex + 1] = numHigh;
+                    }
                 }
+
+                // update our offset
+                this.currentOffset += 2;
             }
 
             // finally, copy our words to the buffer

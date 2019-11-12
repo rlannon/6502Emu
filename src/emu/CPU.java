@@ -1509,6 +1509,14 @@ public class CPU {
 
      */
 
+    private void reset() {
+        this.status = (byte)0b00110000; // initialize status register
+        this.sp = (byte)0xff;    // stack register should be initialized to 0xff (grows downwards)
+        this.pc = (this.memory[RESET_HIGH] << 8 | this.memory[RESET_LOW]) & 0xFFFF; // obtain the reset address from the reset vector
+        this.halted = false;    // to allow execution to begin, make sure the halted flag is false
+        this.setFlag(Status.INTERRUPT_DISABLE); // a system reset should disable interrupts
+    }
+
     private void interrupt(int vector) {
         /*
 
@@ -1522,7 +1530,9 @@ public class CPU {
 
          */
 
+        // get the proper address from vector | (vector + 1) << 8
         vector &= 0xFFFF;
+        int address = ((this.memory[vector + 1] << 8) & 0xFF00) | (this.memory[vector] & 0xFF);
 
         // push high byte, low byte of the program counter
         this.pushToStack((byte)((this.pc >> 8) & 0xFF));
@@ -1532,13 +1542,11 @@ public class CPU {
         this.pushToStack(this.status);
 
         // transfer control
-        this.pc = this.memory[vector];
+        this.pc = address;
     }
 
     void signal(Signal signal) {
         // Sends a signal to the processor
-
-        // todo: is it possible to limit what parameters can be passed
 
         int vector;
         switch (signal) {
@@ -1574,14 +1582,6 @@ public class CPU {
     Constructors and setup methods
 
      */
-
-    private void reset() {
-        this.status = (byte)0b00110000; // initialize status register
-        this.sp = (byte)0xff;    // stack register should be initialized to 0xff (grows downwards)
-        this.pc = (this.memory[RESET_HIGH] << 8 | this.memory[RESET_LOW]) & 0xFFFF; // obtain the reset address from the reset vector
-        this.halted = false;    // to allow execution to begin, make sure the halted flag is false
-        this.setFlag(Status.INTERRUPT_DISABLE); // a system reset should disable interrupts
-    }
 
     void loadBinFile(String emuFilename) throws Exception {
         // initialize CPU memory using an emu file

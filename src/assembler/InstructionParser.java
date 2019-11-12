@@ -4,7 +4,7 @@ class InstructionParser {
     // A class to parse instructions
 
     private static final String ZERO_PATTERN = "\\$[0-fF][0-fF],?";
-    private static final String ABSOLUTE_PATTERN = "([a-zA-Z_]+[0-9a-zA-Z_]+)|(\\$[0-fF][0-fF][0-fF][0-fF],?)";    // either a label or an address
+    private static final String ABSOLUTE_PATTERN = "([a-zA-Z_]+[0-9a-zA-Z_]+,?)|(\\$[0-fF][0-fF][0-fF][0-fF],?)";    // either a label or an address
     private static final String INDIRECT_Y_PATTERN = "(\\([a-zA-Z_][0-9a-zA-Z_]+\\),)|(\\(\\$[0-fF][0-fF]\\),)";  // must be followed by "Y"
     private static final String INDIRECT_X_PATTERN = "(\\([a-zA-Z_][0-9a-zA-Z_]+,)|(\\(\\$[0-fF][0-fF],)"; // must be followed by "X)"
 
