@@ -4,6 +4,7 @@ package GUI;
 import emu.Emulator;
 
 // JDK packages
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -28,9 +29,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.awt.*;
+import java.io.File;
 
 public class GUI extends Application {
     private Emulator emu;
@@ -54,44 +57,8 @@ public class GUI extends Application {
     public void start(Stage primaryStage) {
         primaryStage.setTitle("6502 SDK");
 
-        /*
-
-        FILE MENU
-
-         */
-
-        final Menu fileMenu = new Menu("File");
-        // create some menu options
-        MenuItem openOption = new MenuItem("Open...");
-        MenuItem closeOption = new MenuItem("Close");
-        SeparatorMenuItem sep = new SeparatorMenuItem();
-        MenuItem exitOption = new MenuItem("Exit");
-        // add them to the file menu
-        fileMenu.getItems().add(openOption);
-        fileMenu.getItems().add(closeOption);
-        fileMenu.getItems().add(sep);
-        fileMenu.getItems().add(exitOption);
-
-        /*
-
-        TOOLS MENU
-
-         */
-        final Menu toolsMenu = new Menu("Tools");
-        // create some menu options
-        MenuItem editorOption = new MenuItem("Open Editor");
-        MenuItem asmOption = new MenuItem("Assemble...");
-        MenuItem disassembleOption = new MenuItem("Disassemble");
-        MenuItem hexdumpOption = new MenuItem("Hexdump");
-        // add the items to the tools menu
-        toolsMenu.getItems().add(editorOption);
-        toolsMenu.getItems().add(asmOption);
-        toolsMenu.getItems().add(disassembleOption);
-        toolsMenu.getItems().add(hexdumpOption);
-
         // add the menubar to the page
-        MenuBar menuBar = new MenuBar();
-        menuBar.getMenus().add(fileMenu);
+        MenuBar menuBar = this.createMenu(primaryStage);
 
         VBox vbox = new VBox(menuBar);
         Scene primaryScene = new Scene(vbox, 1000, 500);
@@ -105,6 +72,25 @@ public class GUI extends Application {
 
         // todo: run a loop _here_ to execute the program
         // todo: use an AnimationTimer to trigger NMIs in the emulator loop
+
+        AnimationTimer timer = new AnimationTimer() {
+            /*
+
+            The animation timer that actually runs the emulator program
+
+             */
+
+            @Override
+            public void handle(long now) {
+                // This function will be called _approximately_ 60 times per second
+                // This means, assuming a clock speed of 2MHz and an average of 4 cycles per instruction, we can execute 8k instructions
+                // todo: execute instructions here
+                // todo: signal a CPU NMI if it has been >= 1/30th of a second since last NMI; then, execute
+            }
+        };
+
+        // todo: start timer when the user hits 'run'
+        timer.start();
     }
 
     public void updateGraphics() {
@@ -156,6 +142,137 @@ public class GUI extends Application {
         });
 
         inputStage.show();
+    }
+
+    /*
+
+    Constructor and setup methods
+
+     */
+
+    private MenuBar createMenu(Stage stage) {
+        final MenuBar menu = new MenuBar();
+
+        /*
+
+        FILE MENU
+
+         */
+
+        final Menu fileMenu = new Menu("File");
+        // create some menu options
+        MenuItem openOption = new MenuItem("Open emu file...");
+        // separator
+        MenuItem exitOption = new MenuItem("Exit");
+
+        // add them to the file menu
+        fileMenu.getItems().add(openOption);
+        fileMenu.getItems().add(new SeparatorMenuItem());
+        fileMenu.getItems().add(exitOption);
+
+        openOption.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                FileChooser fileChooser = new FileChooser();
+                File file = fileChooser.showOpenDialog(stage);
+                if (file != null) {
+                    System.out.println("file: " + file.getAbsolutePath());
+                } else {
+                    System.out.println("File was null...");
+                }
+            }
+        });
+
+        exitOption.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                System.exit(0);
+            }
+        });
+
+        /*
+
+        TOOLS MENU
+
+         */
+        final Menu toolsMenu = new Menu("Tools");
+        // create some menu options
+        // MenuItem editorOption = new MenuItem("Open Editor"); // todo: enable editor?
+        MenuItem asmOption = new MenuItem("Assemble...");
+        MenuItem disassembleOption = new MenuItem("Disassemble...");
+        MenuItem hexdumpOption = new MenuItem("Hexdump");
+        CheckMenuItem coreDump = new CheckMenuItem("Generate core dump");
+        // add the items to the tools menu
+        // toolsMenu.getItems().add(editorOption);
+        toolsMenu.getItems().addAll(asmOption, disassembleOption, hexdumpOption, coreDump);
+
+        asmOption.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                System.out.println("Assembling...");
+                FileChooser fileChooser = new FileChooser();
+                File asmFile = fileChooser.showOpenDialog(stage);
+                if (asmFile != null) {
+                    try {
+                        emu.assemble(asmFile.getAbsolutePath());
+                    } catch (Exception e) {
+                        System.out.println("Could not assemble file:");
+                        System.out.println(e.getMessage());
+                    }
+                } else {
+                    System.out.println("Could not assemble file");
+                }
+            }
+        });
+
+        disassembleOption.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                // todo: disassembly
+                System.out.println("Disassembly not yet implemented");
+            }
+        });
+
+        hexdumpOption.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                // todo: hexdump
+                System.out.println("Hexdumb not yet implemented");
+            }
+        });
+
+        /*
+
+        RUN MENU
+
+         */
+        final Menu runMenu = new Menu("Run");
+        MenuItem runOption = new MenuItem("Run...");
+        MenuItem debugOption = new MenuItem("Debug...");
+
+        runMenu.getItems().addAll(runOption, debugOption);
+
+        runOption.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                // todo: run program
+                System.out.println("Running program (well, it will)...");
+            }
+        });
+
+        debugOption.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                // todo: debug program
+                System.out.println("Running program in debug mode (well, it will)...");
+            }
+        });
+
+        // Create the MenuBar
+        menu.getMenus().addAll(fileMenu, toolsMenu, runMenu);
+
+        // return the MenuBar
+        return menu;
     }
 
     public GUI() {
