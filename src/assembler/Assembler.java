@@ -203,7 +203,7 @@ public class Assembler {
             {
                 try {
                     // add the current line and its address to our debugSymbols vector
-                    this.debugSymbols.add(new DebugSymbol(lineNumber, (short) (this.currentOrigin + this.currentOffset)));
+                    DebugSymbol debugSymbol = new DebugSymbol(lineNumber, (short) (this.currentOrigin + this.currentOffset));
 
                     // get the line
                     String line = asmScan.nextLine();
@@ -303,10 +303,16 @@ public class Assembler {
                                 // add it to the symbol table
                                 AssemblerSymbol sym = new AssemblerSymbol(fullSymName, (short) (this.currentOrigin + this.currentOffset));
                                 this.symbolTable.put(fullSymName, sym);
+
+                                // update our debug symbol
+                                debugSymbol.setLabel(fullSymName);
                             }
                         }
                     }
                     // skip empty lines, commented lines
+
+                    // add our debug symbol
+                    this.debugSymbols.add(debugSymbol);
 
                     // increment our line number
                     lineNumber++;

@@ -1,9 +1,14 @@
 package emu;
 
+import assembler.DebugSymbol;
+
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Hashtable;
+import java.util.Vector;
 
 public class Debugger {
     // The debugger for our CPU
@@ -12,6 +17,8 @@ public class Debugger {
     private boolean paused;   // whether we have stoped the CPU
     private boolean[] pagesUsed;    // tracks which pages have been touched by the CPU
     Hashtable<Integer, Boolean> breakpoints;  // the breakpoints we have set
+    Hashtable<String, Integer> labels; // symbols and their addresses
+    Hashtable<Integer, Integer> lineNumbers;    // line numbers and their addresses
 
     /*
 
@@ -19,14 +26,36 @@ public class Debugger {
 
      */
 
-    void setBreakpoint(int address) {
+    public void setBreakpoint(int address) {
         // Set a new breakpoint for the given address
-        this.breakpoints.put(address, Boolean.FALSE);
+        this.breakpoints.put(address, Boolean.TRUE);
     }
 
-    void removeBreakpoint(int address) {
+    public void setBreakpointByLineNumber(int lineNumber) throws Exception {
+        if (this.lineNumbers.containsKey(lineNumber)) {
+            int address = this.lineNumbers.get(lineNumber);
+            this.breakpoints.put(address, Boolean.TRUE);
+        } else {
+            throw new Exception("No such line number in file");
+        }
+    }
+
+    public void setBreakpoint(String label) throws Exception {
+        if (this.labels.containsKey(label)) {
+            int address = this.labels.get(label);
+            this.breakpoints.put(address, Boolean.TRUE);
+        } else {
+            throw new Exception("No such label found in debug symbols");
+        }
+    }
+
+    public void removeBreakpoint(int address) {
         // Remove the breakpoint at an address. If none exists, do nothing
         this.breakpoints.remove(address);
+    }
+
+    public ArrayList<Integer> getBreakpoints() {
+        return Collections.list(this.breakpoints.keys());
     }
 
     void addUsedPage(int page) {
@@ -37,6 +66,20 @@ public class Debugger {
         // adds the page under 'address' as used
         int pageNumber = (address >> 8) & 0xFF;
         this.pagesUsed[pageNumber] = true;
+    }
+
+    void setDebugSymbols(Vector<DebugSymbol> toSet) {
+        // debug symbols available to the debugger
+
+        for (DebugSymbol sym: toSet) {
+            // if the symbol has a label, add it to "labels"
+            if (!sym.getLabel().equals("")) {
+                this.labels.put(sym.getLabel(), sym.getAddress() & 0xFFFF);
+            }
+
+            // add the line number data to "lineNumbers"
+            this.lineNumbers.put(sym.getLine(), sym.getAddress() & 0xFFFF);
+        }
     }
 
     /*
@@ -61,7 +104,7 @@ public class Debugger {
         this.paused = false;
     }
 
-    boolean isPaused() {
+    public boolean isPaused() {
         // tells us whether the debug program has stopped CPU execution
         return this.paused;
     }
@@ -71,9 +114,14 @@ public class Debugger {
         return this.cpu.halted;
     }
 
-    void step() throws Exception {
-        // steps the CPU one time
-        this.cpu.step();
+    public void step() throws Exception {
+        // steps the CPU one time; if a breakpoint is encountered, pauses
+
+        if (this.breakpoints.containsKey(this.cpu.pc)) {
+            this.pause();
+        } else {
+            this.cpu.step();
+        }
     }
 
     /*

@@ -77,7 +77,7 @@ public class DrawGraphics implements Runnable {
         }
     }
 
-    boolean isAlive() {
+    public boolean isAlive() {
         // Determines whether the thread is running or not
 
         if (t == null) {
@@ -93,13 +93,13 @@ public class DrawGraphics implements Runnable {
         }
     }
 
-    void start() {
+    public void start() {
         System.out.println("Starting thread...");
         t = new Thread(this, this.threadName);
         t.start();
     }
 
-    DrawGraphics(String name, GraphicsContext gc, byte[] memory) {
+    public DrawGraphics(String name, GraphicsContext gc, byte[] memory) {
         this.threadName = name;
         this.memory = memory;
         this.gc = gc;

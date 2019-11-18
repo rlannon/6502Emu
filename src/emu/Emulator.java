@@ -2,6 +2,7 @@ package emu;
 
 import GUI.GUI;
 import assembler.Assembler;
+import emu_format.EmuFile;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.stage.Stage;
 
@@ -21,8 +22,11 @@ public class Emulator {
     private GraphicsContext gc; // the graphics context for the screen (Canvas)
 
     private CPU cpu;    // the CPU we are running; automatically creates debugger
+    public Debugger debugger;
     private Assembler assemble; // the Assembler we are using
     private Vector<Input> inputs;   // user inputs; these are configurable
+
+    private boolean debugMode;  // whether the emulator is running in debug mode
 
     public void assemble(String filename) throws Exception {
         // Assemble a file
@@ -30,7 +34,9 @@ public class Emulator {
     }
 
     public void addBinary(String filename) throws Exception {
-        this.cpu.loadBinFile(filename);
+        EmuFile emu = EmuFile.loadEmuFile(filename);
+        this.cpu.loadBinFile(emu);
+        this.debugger.setDebugSymbols(emu.getDebugSymbols());
     }
 
     public void assembleAndAdd(String filename) throws Exception {
@@ -42,7 +48,7 @@ public class Emulator {
         this.cpu.debugger.setBreakpoint(address);
     }
 
-    void addInput(int keyCode, short address, boolean triggersIRQ) {
+    public void addInput(int keyCode, short address, boolean triggersIRQ) {
         /*
 
         addInput
@@ -58,11 +64,19 @@ public class Emulator {
         this.inputs.add(new Input(keyCode, address, triggersIRQ));
     }
 
-    void run(boolean debug) throws Exception {
-        this.run(true, false);
+    public void step() throws Exception {
+        if (this.cpu.debugMode) {
+            this.debugger.step();
+        } else {
+            this.cpu.step();
+        }
     }
 
-    public void run(boolean debug, boolean outputEnabled) throws Exception {
+    void run() throws Exception {
+        this.run(false);
+    }
+
+    public void run(boolean outputEnabled) throws Exception {
         /*
 
         Runs a program
@@ -107,7 +121,7 @@ public class Emulator {
             }
 
             // step the CPU
-            if (debug) {
+            if (this.debugMode) {
                 if (!this.cpu.debugger.isPaused()) {
                     this.cpu.debugger.step();
                 } else {
@@ -121,7 +135,7 @@ public class Emulator {
         }
 
         // print some basic info if we are in debug mode
-        if (debug) {
+        if (this.debugMode) {
             System.out.println("Processor Info:");
             System.out.println("\tA: " + String.format("$%02x", this.cpu.a));
             System.out.println("\tX: " + String.format("$%02x", this.cpu.x));
@@ -132,12 +146,22 @@ public class Emulator {
         }
     }
 
-    void reset() {
+    public void reset() {
         // Resets the CPU
         this.cpu.signal(Signal.RESET);
     }
 
-    void coreDump() throws Exception {
+    public void terminate() {
+        // Terminates program execution
+        this.cpu.halted = true;
+    }
+
+    public void nmi() {
+        // triggers a CPU NMI
+        this.cpu.signal(Signal.NMI);
+    }
+
+    public void coreDump() throws Exception {
         if (this.cpu.debugMode) {
             this.cpu.debugger.generateCoreDump();
         } else {
@@ -149,9 +173,31 @@ public class Emulator {
         this.gc = gc;
     }
 
+    public void setDebugMode() {
+        this.debugMode = true;
+    }
+
+    public boolean isDebugMode() {
+        return this.debugMode;
+    }
+
+    public boolean isRunning() {
+        return !this.cpu.halted;
+    }
+
+    public boolean canDraw() {
+        return (this.cpu.memory[LATCH] != 0);
+    }
+
+    public byte[] getMemory() {
+        return this.cpu.memory;
+    }
+
     public Emulator() {
         // create and reset our CPU
         this.cpu = new CPU();
+        this.debugger = this.cpu.debugger;
+        this.debugMode = false;
         this.reset();
 
         this.assemble = new Assembler();
@@ -159,6 +205,11 @@ public class Emulator {
 
         this.gui = null;
         this.gc = null;
+    }
+
+    public Emulator(boolean debug) {
+        this();
+        this.debugMode = true;
     }
 
     public Emulator(GUI gui) {

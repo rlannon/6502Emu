@@ -197,9 +197,7 @@ public class CPU {
     private void storeInMemory(byte value, int address, int offset) {
         // Stores a byte at a memory address with an offset
         this.memory[address + (offset & 0xFF)] = value;
-        if (this.debugMode) {
-            this.debugger.addUsedPageByAddress(address);
-        }
+        this.debugger.addUsedPageByAddress(address);
     }
 
     // todo: implement store instruction functionality
@@ -1583,10 +1581,8 @@ public class CPU {
 
      */
 
-    void loadBinFile(String emuFilename) throws Exception {
+    void loadBinFile(EmuFile emu) throws Exception {
         // initialize CPU memory using an emu file
-
-        EmuFile emu = EmuFile.loadEmuFile(emuFilename);
 
         // loadEmuFile will return null if the file couldn't be loaded (though it will also throw an exception)
         if (emu != null) {
@@ -1612,9 +1608,6 @@ public class CPU {
                     this.memory[address] = data[i];
                 }
             }
-
-            // now that the memory has been loaded, use reset() to begin execution
-            this.reset();
         } else {
             throw new Exception("Error reading .emu file; cannot initialize CPU");
         }
@@ -1629,18 +1622,10 @@ public class CPU {
         this.memory[RESET_HIGH] = (byte)(org >> 8);
         this.debugMode = debug;
         this.debugger = new Debugger(this);
+        this.halted = true;
     }
 
     public CPU() {
         this(false);
-    }
-
-    public CPU(String emuFilename, boolean debug) throws Exception {
-        this(debug);
-        this.loadBinFile(emuFilename);
-    }
-
-    public CPU (String emuFilename) throws Exception {
-        this(emuFilename, false);
     }
 }
