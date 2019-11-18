@@ -204,6 +204,8 @@ public class Debugger {
         this.pagesUsed = new boolean[256];  // all initialized to false
         this.pagesUsed[1] = true;   // we will always include the stack in a core dump
         this.breakpoints = new Hashtable<>();
+        this.lineNumbers = new Hashtable<>();
+        this.labels = new Hashtable<>();
     }
 
     Debugger(CPU cpu) {

@@ -3,6 +3,7 @@ package emu_format;
 import assembler.DebugSymbol;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.Vector;
 
 public class EmuFile {
@@ -55,12 +56,19 @@ public class EmuFile {
                 // read in our debug symbols
                 for (int i = 0; i < numDebugSymbols; i++)
                 {
+                    int labelLength = in.readInt();
+                    char[] characters = new char[labelLength];
+                    for (int charIndex = 0; charIndex < labelLength; charIndex++) {
+                        characters[charIndex] = in.readChar();
+                    }
+                    String label = new String(characters);
+
                     // fetch the data from the file
                     int lineNumber = in.readInt();
                     short address = in.readShort();
 
                     // construct the symbol and add it to the vector
-                    fileDebugSymbols.add(new DebugSymbol(lineNumber, address));
+                    fileDebugSymbols.add(new DebugSymbol(lineNumber, address, label));
                 }
 
                 // finally, construct the EmuFile object
@@ -73,7 +81,7 @@ public class EmuFile {
         }
         catch (Exception e)
         {
-            System.out.println("Error loading emu file: " + e.toString());
+            System.out.println("Error loading emu file: " + e.getMessage());
         }
 
         return em;
@@ -104,9 +112,16 @@ public class EmuFile {
                 }
             }
 
-            // write debug symbols -- first line number, then address
+            /*
+            Write debug symbols:
+                int: label -> length
+                char: foreach (char: label)
+                int: line number
+                short: address
+             */
             for (DebugSymbol debugSymbol: this.debugSymbols)
             {
+                out.writeChars(debugSymbol.getLabel());
                 out.writeInt(debugSymbol.getLine());
                 out.writeShort(debugSymbol.getAddress());
             }

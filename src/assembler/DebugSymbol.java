@@ -30,8 +30,8 @@ public class DebugSymbol {
         this.label = "";
     }
 
-    public DebugSymbol(String label, short address) {
+    public DebugSymbol(int line, short address, String label) {
+        this(line, address);
         this.label = label;
-        this.address = address;
     }
 }

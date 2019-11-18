@@ -214,8 +214,12 @@ public class GUI extends Application {
         debugStage.show();
     }
 
-    private void addBreakpoint() {
-        // Displays the breakpoint dialog
+    private void addBreakpointDialog() {
+        /*
+        Shows the 'add breakpoint' dialog.
+        This calls the function 'addBreakpoint' to actually add the data
+         */
+
         Stage breakpointStage = new Stage();
         breakpointStage.setTitle("Add New Breakpoint");
 
@@ -241,44 +245,76 @@ public class GUI extends Application {
         hb.getChildren().add(addButton);
 
         addButton.setOnAction(actionEvent -> {
-            // todo: validate input
-            System.out.println(bpOptions.getValue());
-            System.out.println("data: " + data.getCharacters());
+            // add the breakpoint
+            boolean successful = this.addBreakpoint(bpOptions.getValue(), data.getCharacters().toString());
 
-            String mode = bpOptions.getValue();
-            if (mode.equals("Address")) {
-                // todo: make sure it's a valid hex address
-                try {
-                    int address = Integer.parseInt(data.getCharacters().toString(), 16);
-                    emu.debugger.setBreakpoint(address);
-                } catch (NumberFormatException e) {
-                    // todo: display error message
-                    System.out.println("Invalid address; " + e.getMessage());
-                }
-            } else if (mode.equals("Label")) {
-                // todo: check to see if a label exists in the debugger's symbol list
-                try {
-                    emu.debugger.setBreakpoint(data.getCharacters().toString());
-                } catch (Exception e){
-                    // todo: display error message
-                    System.out.println("No such label exists in debugger's symbol table");
-                }
-            } else {
-                // todo: get line number
-                try {
-                    int lineNumber = Integer.parseInt(data.getCharacters().toString());
-                    emu.debugger.setBreakpointByLineNumber(lineNumber);
-                } catch (Exception e) {
-                    // todo: display error message
-                    System.out.println("Could not add breakpoint: " + e.getMessage());
-                }
-            }
-
-            // finally, close the stage
-            breakpointStage.close();
+            // if we were successful, close the stage; else, leave it open
+            if (successful)
+                breakpointStage.close();
         });
 
         breakpointStage.show();
+    }
+
+    private boolean addBreakpoint(String what, String where) {
+        /*
+         Adds a breakpoint to the emulator's debugger
+         Returns whether the breakpoint was added successfully
+
+         @param what    Whether the breakpoint is a label, address, or line number
+         @param where   The data in the textfield (actual label name, address, or line number)
+         @param stage   The stage onto which we should place the alert dialog
+         @return    boolean
+         */
+
+        Alert failureAlert = new Alert(Alert.AlertType.ERROR);
+        failureAlert.setTitle("Error");
+
+        if (what.equals("Address")) {
+            // todo: make sure it's a valid hex address
+            try {
+                int address = Integer.parseInt(where, 16);
+                if (address >= 0 && address < 65536) {
+                    emu.debugger.setBreakpoint(address);
+                    return true;
+                } else {
+                    throw new Exception("Address out of range");
+                }
+            } catch (NumberFormatException n) {
+                failureAlert.setHeaderText("Invalid address");
+                failureAlert.setContentText("You must enter a valid hexadecimal number");
+                failureAlert.show();
+                return false;
+            } catch (Exception e) {
+                failureAlert.setHeaderText("Invalid address");
+                failureAlert.setContentText(e.getMessage());
+                failureAlert.show();
+                return false;
+            }
+        } else if (what.equals("Label")) {
+            // todo: check to see if a label exists in the debugger's symbol list
+            try {
+                emu.debugger.setBreakpoint(where);
+                return true;
+            } catch (Exception e){
+                failureAlert.setHeaderText("Label not found");
+                failureAlert.setContentText("Label does not exist in the debugger's symbol table");
+                failureAlert.show();
+                return false;
+            }
+        } else {
+            // todo: get line number
+            try {
+                int lineNumber = Integer.parseInt(where);
+                emu.debugger.setBreakpointByLineNumber(lineNumber);
+                return true;
+            } catch (Exception e) {
+                failureAlert.setHeaderText("Invalid line number");
+                failureAlert.setContentText(e.getMessage());
+                failureAlert.show();
+                return false;
+            }
+        }
     }
 
     /*
@@ -319,7 +355,15 @@ public class GUI extends Application {
             FileChooser fileChooser = new FileChooser();
             File file = fileChooser.showOpenDialog(stage);
             if (file != null) {
-                System.out.println("file: " + file.getAbsolutePath());
+                try {
+                    emu.addBinary(file.getAbsolutePath());
+                } catch (Exception e) {
+                    Alert fileAlert = new Alert(Alert.AlertType.ERROR);
+                    fileAlert.setTitle("File Error");
+                    fileAlert.setHeaderText("Could not load file");
+                    fileAlert.setContentText(e.getMessage());
+                    fileAlert.show();
+                }
             } else {
                 System.out.println("File was null...");
             }
@@ -411,7 +455,7 @@ public class GUI extends Application {
 
         addBreakpointOption.setOnAction(actionEvent -> {
             // Add a breakpoint using the breakpoint dialog
-            addBreakpoint();
+            addBreakpointDialog();
         });
 
         removeBreakpointOption.setOnAction(actionEvent ->  {
