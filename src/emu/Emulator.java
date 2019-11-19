@@ -28,20 +28,15 @@ public class Emulator {
 
     private boolean debugMode;  // whether the emulator is running in debug mode
 
-    public void assemble(String filename) throws Exception {
+    public void assemble(String inputFilename, String outputFilename) throws Exception {
         // Assemble a file
-        this.assemble.assemble(filename);
+        this.assemble.assemble(inputFilename, outputFilename);
     }
 
     public void addBinary(String filename) throws Exception {
         EmuFile emu = EmuFile.loadEmuFile(filename);
         this.cpu.loadBinFile(emu);
         this.debugger.setDebugSymbols(emu.getDebugSymbols());
-    }
-
-    public void assembleAndAdd(String filename) throws Exception {
-        this.assemble(filename);    // assemble the file
-        this.addBinary("assembled.emu");    // name for assembled file
     }
 
     void setBreakpoint(int address) {
@@ -176,8 +171,8 @@ public class Emulator {
         this.gc = gc;
     }
 
-    public void setDebugMode() {
-        this.debugMode = true;
+    public void setDebugMode(boolean mode) {
+        this.debugMode = mode;
     }
 
     public boolean isDebugMode() {

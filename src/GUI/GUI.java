@@ -147,6 +147,11 @@ public class GUI extends Application {
             public void handle(long now) {
                 // This function will be called _approximately_ 60 times per second
                 // This means, assuming a clock speed of 2MHz and an average of 4 cycles per instruction, we can execute 8k instructions
+
+                // NMI will be disabled when the CPU is paused for debugging
+                if (emu.debugger.isPaused())
+                    this.stop();
+
                 if (now - lastNMI > 33_333_333) {
                     lastNMI = System.nanoTime();
                     emu.nmi();
@@ -156,6 +161,7 @@ public class GUI extends Application {
                 new Thread(gDrawer).start();
 
                 // execute our instructions
+                // todo: do we really need separate loops for emu.debugger.step and emu.step, considering emu.step checks for debug mode?
                 int i = 0;
                 if (emu.isDebugMode()) {
                     while (!emu.debugger.isPaused() && emu.isRunning() && i < INSTRUCTIONS_PER_FRAME) {
@@ -180,6 +186,7 @@ public class GUI extends Application {
 
                 if (!emu.isRunning()) {
                     this.stop();
+                    userConsole.appendText("Done.\n");
 
                     if (genCoreDumpProperty.get()) {
                         try {
@@ -479,7 +486,7 @@ public class GUI extends Application {
             if (asmFile != null) {
                 userConsole.appendText("Assembling...\n");
                 try {
-                    emu.assemble(asmFile.getAbsolutePath());
+                    emu.assemble(asmFile.getAbsolutePath(), "assembled1.emu");
                     userConsole.appendText("Done; no errors.\n");
                 } catch (Exception e) {
                     userConsole.appendText("**** Assembly Error ****\n");
@@ -512,12 +519,13 @@ public class GUI extends Application {
         MenuItem runOption = new MenuItem("Run...");
         MenuItem debugOption = new MenuItem("Debug...");
         MenuItem stopOption = new MenuItem("Terminate");
+        MenuItem resetOption = new MenuItem("Reset");
         MenuItem debuggerPanelOption = new MenuItem("Open Debugger Panel");
         MenuItem addBreakpointOption = new MenuItem("Add Breakpoint...");
         MenuItem removeBreakpointOption = new MenuItem("Remove Breakpoint...");
 
-        runMenu.getItems().addAll(runOption, debugOption, new SeparatorMenuItem(), stopOption, new SeparatorMenuItem(),
-                debuggerPanelOption, addBreakpointOption, removeBreakpointOption);
+        runMenu.getItems().addAll(runOption, debugOption, new SeparatorMenuItem(), stopOption, resetOption,
+                new SeparatorMenuItem(), debuggerPanelOption, addBreakpointOption, removeBreakpointOption);
 
         runOption.setOnAction(actionEvent -> {
             // Run program
@@ -529,7 +537,7 @@ public class GUI extends Application {
                 coreDumpAlert.setContentText("You must run a program in debug mode to generate a core dump");
                 coreDumpAlert.show();
             }
-
+            emu.setDebugMode(false);
             emu.reset();
             lastNMI = System.nanoTime();
             timer.start();
@@ -540,7 +548,7 @@ public class GUI extends Application {
             userConsole.appendText("Debugging...\n");
             emu.debugger.setGenCoreDump(genCoreDumpProperty.get());
             displayDebugPanel();  // display debugger panel
-            emu.setDebugMode(); // run in debug mode
+            emu.setDebugMode(true); // run in debug mode
             emu.reset();
             lastNMI = System.nanoTime();
             timer.start();
@@ -551,6 +559,20 @@ public class GUI extends Application {
             emu.terminate();
             timer.stop();
             userConsole.appendText("Terminated.\n");
+        });
+
+        resetOption.setOnAction(actionEvent -> {
+            // Reset CPU
+
+            // First, terminate
+            emu.terminate();
+            timer.stop();
+
+            // Then, reset
+            emu.reset();
+
+            // Print a message in the log
+            userConsole.appendText("Reset.\n");
         });
 
         debuggerPanelOption.setOnAction(actionEvent -> {

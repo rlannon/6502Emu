@@ -178,171 +178,156 @@ public class Assembler {
         }
     }
 
-    public void assemble(String filename) throws Exception {
-        // an overloaded version of parseFile that allows us to call the function with a filename
-        // this is for the case where we didn't pass a filename to the constructor
-        try {
-            this.asmIn = new FileReader(filename);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
+    public void assemble(String inputFilename, String outputFilename) throws Exception {
+        // parses the ASM file inputFilename
 
-        this.assemble();
-    }
+        // open the input file
+        this.asmIn = new FileReader(inputFilename);
 
-    private void assemble() throws Exception {
-        // parses the ASM file this.asmIn
-
+        // assemble the file
         int lineNumber = 1;
-        if (this.asmIn != null)
+        System.out.println("Assembling file...");
+        Scanner asmScan = new Scanner(this.asmIn);
+
+        while (asmScan.hasNextLine())
         {
-            System.out.println("Assembling file...");
-            Scanner asmScan = new Scanner(this.asmIn);
+            try {
+                // add the current line and its address to our debugSymbols vector
+                DebugSymbol debugSymbol = new DebugSymbol(lineNumber, (short) (this.currentOrigin + this.currentOffset));
 
-            while (asmScan.hasNextLine())
-            {
-                try {
-                    // add the current line and its address to our debugSymbols vector
-                    DebugSymbol debugSymbol = new DebugSymbol(lineNumber, (short) (this.currentOrigin + this.currentOffset));
+                // get the line
+                String line = asmScan.nextLine();
 
-                    // get the line
-                    String line = asmScan.nextLine();
+                // split the line into its components, ignoring comments and whitespace
+                String[] lineData = splitString(line);
 
-                    // split the line into its components, ignoring comments and whitespace
-                    String[] lineData = splitString(line);
+                // skip all empty lines and comments
+                if (line.length() > 0 && lineData.length > 0) {
+                    // check to see if we have an instruction
+                    if (InstructionParser.isMnemonic(lineData[0])) {
+                        // check to see if lineData[1] is a symbol name; if so, add it to the relocation table
+                        if (lineData.length > 1) {
+                            if (lineData[1].matches(SYMBOL_NAME_REGEX)) {
+                                String symName = lineData[1];
 
-                    // skip all empty lines and comments
-                    if (line.length() > 0 && lineData.length > 0) {
-                        // check to see if we have an instruction
-                        if (InstructionParser.isMnemonic(lineData[0])) {
-                            // check to see if lineData[1] is a symbol name; if so, add it to the relocation table
-                            if (lineData.length > 1) {
-                                if (lineData[1].matches(SYMBOL_NAME_REGEX)) {
-                                    String symName = lineData[1];
-
-                                    // if we have the address-of-symbol operator (#), skip it
-                                    if (symName.charAt(0) == '#') {
-                                        symName = symName.substring(1);
-                                    }
-
-                                    // if we have a comma at the end (indexed value), skip it
-                                    if (symName.charAt(symName.length() - 1) == ',') {
-                                        symName = symName.substring(0, symName.length() - 1);
-                                    }
-
-                                    // if we have a ., get the parent label
-                                    if (symName.charAt(0) == '.') {
-                                        symName = getFullSymbolName(symName);
-                                    }
-
-                                    this.relocationTable.add(new RelocationSymbol(symName, this.currentOrigin, this.currentOffset, InstructionParser.getAddressingMode(lineData)));
+                                // if we have the address-of-symbol operator (#), skip it
+                                if (symName.charAt(0) == '#') {
+                                    symName = symName.substring(1);
                                 }
-                            }
 
-                            // get our instruction data, update the offset, and add the bytes to our bytecode buffer
-                            byte[] instructionData = InstructionParser.parseInstruction(lineData);
-                            this.copyToBuffer(instructionData);
+                                // if we have a comma at the end (indexed value), skip it
+                                if (symName.charAt(symName.length() - 1) == ',') {
+                                    symName = symName.substring(0, symName.length() - 1);
+                                }
 
-                            // update the offset
-                            this.currentOffset += instructionData.length;   // increase our offset
-                        }
-                        // check to see if we have an assembler directive
-                        else if (isDirective(lineData[0])) {
-                            // get the directive as a string to make the code easier to read
-                            String directive = lineData[0].toLowerCase();
+                                // if we have a ., get the parent label
+                                if (symName.charAt(0) == '.') {
+                                    symName = getFullSymbolName(symName);
+                                }
 
-                            // .org directive
-                            switch (directive) {
-                                case ".org":
-                                    this.handleOrg(lineData);
-                                    break;
-                                case ".db":
-                                case ".byte":
-                                    this.defineByte(lineData);
-                                    break;
-                                case ".dw":
-                                case ".word":
-                                    this.defineWords(lineData);
-                                    break;
-                                case ".rsset":
-                                    this.handleRSSet(lineData);
-                                    break;
-                                case ".rs":
-                                    this.reserveBytes(lineData);
-                                    break;
-                                default:
-                                    throw new Exception("Invalid assembler directive");
+                                this.relocationTable.add(new RelocationSymbol(symName, this.currentOrigin, this.currentOffset, InstructionParser.getAddressingMode(lineData)));
                             }
                         }
-                        // otherwise, it is a symbol name
-                        else {
-                            // the symbol must be followed immediately by a colon or an equals sign
-                            if (lineData.length == 1) {
-                                if (lineData[0].charAt(lineData[0].length() - 1) == ':') {
-                                    lineData[0] = lineData[0].substring(0, lineData[0].length() - 1);
-                                } else {
-                                    throw new Exception("Invalid syntax");
-                                }
-                            } else {
-                                if (!lineData[1].equals("=")) {
-                                    throw new Exception("Invalid syntax");
-                                } else {
-                                    if (lineData.length > 3) {
-                                        throw new Exception("Invalid syntax");
-                                    }
-                                }
-                            }
 
-                            // create a symbol with the current offset
-                            String fullSymName = this.getFullSymbolName(lineData[0]);
+                        // get our instruction data, update the offset, and add the bytes to our bytecode buffer
+                        byte[] instructionData = InstructionParser.parseInstruction(lineData);
+                        this.copyToBuffer(instructionData);
 
-                            // check to see if the symbol is already in our table
-                            if (this.symbolTable.contains(fullSymName)) {
-                                throw new Exception("Symbol already in table");
-                            } else {
-                                // add it to the symbol table
-                                AssemblerSymbol sym = new AssemblerSymbol(fullSymName, (short) (this.currentOrigin + this.currentOffset));
-                                this.symbolTable.put(fullSymName, sym);
+                        // update the offset
+                        this.currentOffset += instructionData.length;   // increase our offset
+                    }
+                    // check to see if we have an assembler directive
+                    else if (isDirective(lineData[0])) {
+                        // get the directive as a string to make the code easier to read
+                        String directive = lineData[0].toLowerCase();
 
-                                // update our debug symbol
-                                debugSymbol.setLabel(fullSymName);
-                            }
+                        // .org directive
+                        switch (directive) {
+                            case ".org":
+                                this.handleOrg(lineData);
+                                break;
+                            case ".db":
+                            case ".byte":
+                                this.defineByte(lineData);
+                                break;
+                            case ".dw":
+                            case ".word":
+                                this.defineWords(lineData);
+                                break;
+                            case ".rsset":
+                                this.handleRSSet(lineData);
+                                break;
+                            case ".rs":
+                                this.reserveBytes(lineData);
+                                break;
+                            default:
+                                throw new Exception("Invalid assembler directive");
                         }
                     }
-                    // skip empty lines, commented lines
+                    // otherwise, it is a symbol name
+                    else {
+                        // the symbol must be followed immediately by a colon or an equals sign
+                        if (lineData.length == 1) {
+                            if (lineData[0].charAt(lineData[0].length() - 1) == ':') {
+                                lineData[0] = lineData[0].substring(0, lineData[0].length() - 1);
+                            } else {
+                                throw new Exception("Invalid syntax");
+                            }
+                        } else {
+                            if (!lineData[1].equals("=")) {
+                                throw new Exception("Invalid syntax");
+                            } else {
+                                if (lineData.length > 3) {
+                                    throw new Exception("Invalid syntax");
+                                }
+                            }
+                        }
 
-                    // add our debug symbol
-                    this.debugSymbols.add(debugSymbol);
+                        // create a symbol with the current offset
+                        String fullSymName = this.getFullSymbolName(lineData[0]);
 
-                    // increment our line number
-                    lineNumber++;
-                } catch (Exception e) {
-                    // if an exception occurred during assembly, catch it, add the line number, and throw a new one
-                    throw new Exception("Error on line " + lineNumber + ": " + e.getMessage());
+                        // check to see if the symbol is already in our table
+                        if (this.symbolTable.contains(fullSymName)) {
+                            throw new Exception("Symbol already in table");
+                        } else {
+                            // add it to the symbol table
+                            AssemblerSymbol sym = new AssemblerSymbol(fullSymName, (short) (this.currentOrigin + this.currentOffset));
+                            this.symbolTable.put(fullSymName, sym);
+
+                            // update our debug symbol
+                            debugSymbol.setLabel(fullSymName);
+                        }
+                    }
                 }
+                // skip empty lines, commented lines
+
+                // add our debug symbol
+                this.debugSymbols.add(debugSymbol);
+
+                // increment our line number
+                lineNumber++;
+            } catch (Exception e) {
+                // if an exception occurred during assembly, catch it, add the line number, and throw a new one
+                throw new Exception("Error on line " + lineNumber + ": " + e.getMessage());
             }
-
-            // once we are done, create a new bank if we had data
-            if (this.buffer.length > 0)
-            {
-                this.banks.add(new Bank(this.currentOrigin, this.buffer));
-            }
-
-            asmScan.close();
-
-            // next, resolve all symbols
-            this.resolveSymbols();
-
-            // now, create an EmuFile
-            EmuFile emu = new EmuFile(this.banks, this.debugSymbols);
-            emu.writeEmuFile("assembled.emu");
-
-            System.out.println("Done.");
         }
-        else
+
+        // once we are done, create a new bank if we had data
+        if (this.buffer.length > 0)
         {
-            throw new IOException("No file to parse");
+            this.banks.add(new Bank(this.currentOrigin, this.buffer));
         }
+
+        asmScan.close();
+
+        // next, resolve all symbols
+        this.resolveSymbols();
+
+        // now, create an EmuFile
+        EmuFile emu = new EmuFile(this.banks, this.debugSymbols);
+        emu.writeEmuFile(outputFilename);
+
+        System.out.println("Done.");
     }
 
     /*
