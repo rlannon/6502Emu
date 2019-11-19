@@ -25,13 +25,12 @@ public class DebugSymbol {
 
     public DebugSymbol(int line, short address)
     {
-        this.line = line;
-        this.address = address;
-        this.label = "";
+        this(line, address, "");
     }
 
     public DebugSymbol(int line, short address, String label) {
-        this(line, address);
+        this.line = line;
+        this.address = address;
         this.label = label;
     }
 }

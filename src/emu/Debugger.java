@@ -15,6 +15,7 @@ public class Debugger {
 
     private CPU cpu;
     private boolean paused;   // whether we have stoped the CPU
+    private boolean genCoreDump;    // whether we should generate a core dump on termination
     private boolean[] pagesUsed;    // tracks which pages have been touched by the CPU
     Hashtable<Integer, Boolean> breakpoints;  // the breakpoints we have set
     Hashtable<String, Integer> labels; // symbols and their addresses
@@ -25,6 +26,10 @@ public class Debugger {
     Utility functions
 
      */
+
+    public void setGenCoreDump(boolean toSet) {
+        this.genCoreDump = toSet;
+    }
 
     public void setBreakpoint(int address) {
         // Set a new breakpoint for the given address
@@ -97,6 +102,11 @@ public class Debugger {
     public void terminate() {
         // kills the process, setting this.cpu.halted
         this.cpu.halted = true;
+
+        // if we need to, generate a core dump
+        if (this.genCoreDump) {
+            this.generateCoreDump();
+        }
     }
 
     public void resume() {

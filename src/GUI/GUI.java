@@ -1,6 +1,7 @@
 package GUI;
 
 // custom packages
+import emu.DrawGraphics;
 import emu.Emulator;
 
 // JDK packages
@@ -26,6 +27,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
@@ -35,6 +37,13 @@ import javafx.stage.Stage;
 import java.io.File;
 
 public class GUI extends Application {
+    /*
+
+    The GUI class allows a user interface with the emulator.
+    Note the GUI is also responsible for running programs through the use of the animation timer.
+
+     */
+
     private Emulator emu;
 
     final public static int pxWidth = 8;
@@ -50,11 +59,19 @@ public class GUI extends Application {
     private AnimationTimer timer;
     private long lastNMI;
 
-    private void drawPixel(int address, byte value) {
+    private DrawGraphics gDrawer;
 
-    }
+    private TextArea userConsole;
+
+    /*
+
+    Methods
+
+     */
 
     public static void main(String[] args) {
+        // launch the program
+
         launch(args);
     }
 
@@ -65,13 +82,54 @@ public class GUI extends Application {
         // add the menubar to the page
         MenuBar menuBar = this.createMenu(primaryStage);
 
-        VBox vbox = new VBox(menuBar);
-        Scene primaryScene = new Scene(vbox, 1000, 500);
+        VBox outer = new VBox(menuBar);
+        HBox hbox = new HBox();
+        hbox.setSpacing(10);
+        VBox leftCol = new VBox();
+        leftCol.setSpacing(10);
+        VBox rightCol = new VBox();
+        rightCol.setSpacing(10);
+        outer.getChildren().add(hbox);
+        hbox.getChildren().addAll(leftCol, rightCol);
+        Scene primaryScene = new Scene(outer, 1000, 500);
         primaryStage.setScene(primaryScene);
 
-        // create a canvas
+        // add the register and status monitor
+        TextArea registerMonitor = new TextArea();
+        registerMonitor.setMaxWidth(300);
+        registerMonitor.setMinHeight(200);
+        registerMonitor.setEditable(false); // the user cannot modify the text content here, only the program can
+        registerMonitor.setFont(Font.font("Courier New", FontWeight.NORMAL, 12));
+        registerMonitor.appendText("A: $00\nX: $00\nY: $00\n\nPC: $0000\n\nSTATUS:\n\tN V B - D I Z C\n\t0 0 1 1 0 0 0 0");
 
-        vbox.getChildren().add(screen);
+        // create a label for the monitor
+        Label regMonitorLabel = new Label("CPU Status");
+        regMonitorLabel.setLabelFor(registerMonitor);
+
+        // add the monitor and its label
+        leftCol.getChildren().add(regMonitorLabel);
+        leftCol.getChildren().add(registerMonitor);
+
+        // create the information/error console
+        userConsole = new TextArea();
+        userConsole.setMaxWidth(300);
+        userConsole.setMinHeight(200);
+        userConsole.setEditable(false);
+        userConsole.setFont(Font.font("Courier New", FontWeight.NORMAL, 12));
+
+        Label consoleLabel = new Label("Message Console");
+        consoleLabel.setLabelFor(userConsole);
+
+        leftCol.getChildren().add(consoleLabel);
+        leftCol.getChildren().add(userConsole);
+
+        // todo: create a canvas and allow graphics updates
+        Label screenLabel = new Label("Screen");
+        screenLabel.setLabelFor(screen);
+        rightCol.getChildren().add(screenLabel);
+        rightCol.getChildren().add(screen);
+        screenContext.setFill(Color.BLACK);
+        screenContext.fillRect(0, 0, screenWidth * pxWidth, screenWidth * pxHeight);
 
         primaryStage.show();
 
@@ -89,15 +147,15 @@ public class GUI extends Application {
             public void handle(long now) {
                 // This function will be called _approximately_ 60 times per second
                 // This means, assuming a clock speed of 2MHz and an average of 4 cycles per instruction, we can execute 8k instructions
-                // todo: execute instructions here
-                // todo: signal a CPU NMI if it has been >= 1/30th of a second since last NMI; then, execute
                 if (now - lastNMI > 33_333_333) {
                     lastNMI = System.nanoTime();
                     emu.nmi();
                 }
 
-                // todo: update graphics w/ canvas
+                // begin the thread
+                new Thread(gDrawer).start();
 
+                // execute our instructions
                 int i = 0;
                 if (emu.isDebugMode()) {
                     while (!emu.debugger.isPaused() && emu.isRunning() && i < INSTRUCTIONS_PER_FRAME) {
@@ -131,12 +189,26 @@ public class GUI extends Application {
                         }
                     }
                 }
+
+                // update our CPU monitor
+                updateCPUMonitor(registerMonitor);
             }
         };
     }
 
     public void updateGraphics() {
+        // todo: update screen graphics using concurrency
+    }
 
+    private void updateCPUMonitor(TextArea monitor) {
+        monitor.clear();
+        monitor.appendText(
+                String.format("A: $%02x\nX: $%02x\nY: $%02x\n\nPC: $%04x\n\nSTATUS:\n\tN V B - D I Z C\n\t0 0 1 1 0 0 0 0",
+                        emu.debugger.getA(),
+                        emu.debugger.getX(),
+                        emu.debugger.getY(),
+                        emu.debugger.getPC())
+        );
     }
 
     private void addInput() {
@@ -188,7 +260,7 @@ public class GUI extends Application {
         inputStage.show();
     }
 
-    private void displayDebugger() {
+    private void displayDebugPanel() {
         // Displays the program debugger
         Stage debugStage = new Stage();
         debugStage.setTitle("Debugger Panel");
@@ -271,7 +343,6 @@ public class GUI extends Application {
         failureAlert.setTitle("Error");
 
         if (what.equals("Address")) {
-            // todo: make sure it's a valid hex address
             try {
                 int address = Integer.parseInt(where, 16);
                 if (address >= 0 && address < 65536) {
@@ -292,7 +363,6 @@ public class GUI extends Application {
                 return false;
             }
         } else if (what.equals("Label")) {
-            // todo: check to see if a label exists in the debugger's symbol list
             try {
                 emu.debugger.setBreakpoint(where);
                 return true;
@@ -303,7 +373,6 @@ public class GUI extends Application {
                 return false;
             }
         } else {
-            // todo: get line number
             try {
                 int lineNumber = Integer.parseInt(where);
                 emu.debugger.setBreakpointByLineNumber(lineNumber);
@@ -343,20 +412,25 @@ public class GUI extends Application {
         // create some menu options
         MenuItem openOption = new MenuItem("Open emu file...");
         // separator
+        MenuItem clearConsoleOption = new MenuItem("Clear console");
+        // separator
         MenuItem exitOption = new MenuItem("Exit");
 
         // add them to the file menu
-        fileMenu.getItems().add(openOption);
-        fileMenu.getItems().add(new SeparatorMenuItem());
-        fileMenu.getItems().add(exitOption);
+        fileMenu.getItems().addAll(openOption, new SeparatorMenuItem(), clearConsoleOption, new SeparatorMenuItem(), exitOption);
 
         // set the actions for each item
         openOption.setOnAction(actionEvent -> {
+            // create our file chooser
             FileChooser fileChooser = new FileChooser();
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("EMU", "*.emu"));
+
+            // get the file
             File file = fileChooser.showOpenDialog(stage);
             if (file != null) {
                 try {
                     emu.addBinary(file.getAbsolutePath());
+                    userConsole.appendText("Successfully opened file.\n");
                 } catch (Exception e) {
                     Alert fileAlert = new Alert(Alert.AlertType.ERROR);
                     fileAlert.setTitle("File Error");
@@ -367,6 +441,11 @@ public class GUI extends Application {
             } else {
                 System.out.println("File was null...");
             }
+        });
+
+        clearConsoleOption.setOnAction(actionEvent -> {
+            // clear the user console
+            userConsole.clear();
         });
 
         exitOption.setOnAction(actionEvent -> System.exit(0));
@@ -389,18 +468,25 @@ public class GUI extends Application {
 
         // set our actions for each option
         asmOption.setOnAction(actionEvent -> {
-            System.out.println("Assembling...");
             FileChooser fileChooser = new FileChooser();
+            fileChooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("All files", "*.*"),
+                    new FileChooser.ExtensionFilter("S File", "*.s"),
+                    new FileChooser.ExtensionFilter("ASM File", "*.asm")
+            );
             File asmFile = fileChooser.showOpenDialog(stage);
+
             if (asmFile != null) {
+                userConsole.appendText("Assembling...\n");
                 try {
                     emu.assemble(asmFile.getAbsolutePath());
+                    userConsole.appendText("Done; no errors.\n");
                 } catch (Exception e) {
-                    System.out.println("Could not assemble file:");
-                    System.out.println(e.getMessage());
+                    userConsole.appendText("**** Assembly Error ****\n");
+                    userConsole.appendText(e.getMessage() + "\n");
                 }
             } else {
-                System.out.println("Could not assemble file");
+                System.out.println("No file to assemble.\n");
             }
         });
 
@@ -426,31 +512,50 @@ public class GUI extends Application {
         MenuItem runOption = new MenuItem("Run...");
         MenuItem debugOption = new MenuItem("Debug...");
         MenuItem stopOption = new MenuItem("Terminate");
+        MenuItem debuggerPanelOption = new MenuItem("Open Debugger Panel");
         MenuItem addBreakpointOption = new MenuItem("Add Breakpoint...");
         MenuItem removeBreakpointOption = new MenuItem("Remove Breakpoint...");
 
-        runMenu.getItems().addAll(runOption, debugOption, new SeparatorMenuItem(), stopOption, new SeparatorMenuItem(), addBreakpointOption, removeBreakpointOption);
+        runMenu.getItems().addAll(runOption, debugOption, new SeparatorMenuItem(), stopOption, new SeparatorMenuItem(),
+                debuggerPanelOption, addBreakpointOption, removeBreakpointOption);
 
         runOption.setOnAction(actionEvent -> {
-            // todo: run program
-            System.out.println("Running program (well, it will)...");
-            System.out.println("Gen core dump? " + genCoreDumpProperty.get());
+            // Run program
+            userConsole.appendText("Running...\n");
+            if (genCoreDumpProperty.get()) {
+                Alert coreDumpAlert = new Alert(Alert.AlertType.WARNING);
+                coreDumpAlert.setTitle("Runtime error");
+                coreDumpAlert.setHeaderText("Cannot generate core dump");
+                coreDumpAlert.setContentText("You must run a program in debug mode to generate a core dump");
+                coreDumpAlert.show();
+            }
+
             emu.reset();
             lastNMI = System.nanoTime();
             timer.start();
         });
 
         debugOption.setOnAction(actionEvent -> {
-            // todo: debug program
-            System.out.println("Running program in debug mode (well, it will)...");
-            System.out.println("Gen core dump? " + genCoreDumpProperty.get());
-            displayDebugger();
+            // Run a program in debug mode
+            userConsole.appendText("Debugging...\n");
+            emu.debugger.setGenCoreDump(genCoreDumpProperty.get());
+            displayDebugPanel();  // display debugger panel
+            emu.setDebugMode(); // run in debug mode
+            emu.reset();
+            lastNMI = System.nanoTime();
+            timer.start();
         });
 
         stopOption.setOnAction(actionEvent -> {
             // Terminate program execution
             emu.terminate();
             timer.stop();
+            userConsole.appendText("Terminated.\n");
+        });
+
+        debuggerPanelOption.setOnAction(actionEvent -> {
+            // displays the debugger panel without debugging the program
+            displayDebugPanel();
         });
 
         addBreakpointOption.setOnAction(actionEvent -> {
@@ -475,5 +580,6 @@ public class GUI extends Application {
         this.screen = new Canvas(screenWidth * pxWidth, screenWidth * pxHeight);
         this.screenContext = screen.getGraphicsContext2D();
         this.lastNMI = 0;
+        this.gDrawer = new DrawGraphics("gDrawer", this.screenContext, this.emu.getMemory());
     }
 }

@@ -153,7 +153,10 @@ public class Emulator {
 
     public void terminate() {
         // Terminates program execution
-        this.cpu.halted = true;
+        if (debugMode)
+            this.debugger.terminate();
+        else
+            this.cpu.halted = true;
     }
 
     public void nmi() {

@@ -14,6 +14,8 @@ public class EmuFile {
 
      */
 
+    // todo: if file is being used by another process, display in user console?
+
     private Vector<Bank> prgBanks;
     private Vector<DebugSymbol> debugSymbols;
 
@@ -121,7 +123,12 @@ public class EmuFile {
              */
             for (DebugSymbol debugSymbol: this.debugSymbols)
             {
-                out.writeChars(debugSymbol.getLabel());
+                char[] characters = debugSymbol.getLabel().toCharArray();
+                out.writeInt(characters.length);
+                for (char c: characters) {
+                    out.writeChar(c);
+                }
+
                 out.writeInt(debugSymbol.getLine());
                 out.writeShort(debugSymbol.getAddress());
             }

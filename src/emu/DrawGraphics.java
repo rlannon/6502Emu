@@ -24,56 +24,59 @@ public class DrawGraphics implements Runnable {
 
     public void run() {
         // Executes the graphics drawing thread
-
         System.out.println("Drawing graphics");
 
-        // todo: how to update canvas?
+        try {
+            Thread.sleep(1);    // wait 1ms before drawing graphics to allow NMI time to execute
 
-        // copy our data to the GUI
-        for (int i = 0; i < BUFFER_LEN; i++) {
-            // get the color of the pixel based on the value at the address
-            byte colorByte = this.memory[BUFFER_MIN + i];
-            Color color;
-            switch (colorByte) {
-                case 1:
-                    color = Color.WHITE;
-                    break;
-                case 2:
-                    color = Color.RED;
-                    break;
-                case 3:
-                    color = Color.CYAN;
-                    break;
-                case 4:
-                    color = Color.PURPLE;
-                    break;
-                case 5:
-                    color = Color.GREEN;
-                    break;
-                case 6:
-                    color = Color.BLUE;
-                    break;
-                case 7:
-                    color = Color.YELLOW;
-                    break;
-                case 8:
-                    color = Color.ORANGE;
-                    break;
-                case 9:
-                    color = Color.BROWN;
-                    break;
-                default:
-                    color = Color.BLACK;
-                    break;
+            // copy our data to the GUI
+            for (int i = 0; i < BUFFER_LEN; i++) {
+                // get the color of the pixel based on the value at the address
+                byte colorByte = this.memory[BUFFER_MIN + i];
+                Color color;
+                switch (colorByte) {
+                    case 1:
+                        color = Color.WHITE;
+                        break;
+                    case 2:
+                        color = Color.RED;
+                        break;
+                    case 3:
+                        color = Color.CYAN;
+                        break;
+                    case 4:
+                        color = Color.PURPLE;
+                        break;
+                    case 5:
+                        color = Color.GREEN;
+                        break;
+                    case 6:
+                        color = Color.BLUE;
+                        break;
+                    case 7:
+                        color = Color.YELLOW;
+                        break;
+                    case 8:
+                        color = Color.ORANGE;
+                        break;
+                    case 9:
+                        color = Color.BROWN;
+                        break;
+                    default:
+                        color = Color.BLACK;
+                        break;
+                }
+
+                // now that we have the color, get the coordinate from the address
+                int y = (i / GUI.screenWidth) * GUI.pxHeight;
+                int x = i * GUI.pxWidth;
+
+                // fill the rectangle accordingly
+                gc.setFill(color);
+                gc.fillRect(x, y, GUI.pxWidth, GUI.pxHeight);
             }
-
-            // now that we have the color, get the coordinate from the address
-            int y = (i / GUI.screenWidth) * GUI.pxHeight;
-            int x = i * GUI.pxWidth;
-
-            // fill the rectangle accordingly
-            gc.setFill(color);
-            gc.fillRect(x, y, GUI.pxWidth, GUI.pxHeight);
+        } catch (InterruptedException e) {
+            System.out.println("Failed to draw graphics!");
         }
     }
 

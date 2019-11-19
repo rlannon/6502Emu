@@ -184,7 +184,7 @@ public class Assembler {
         try {
             this.asmIn = new FileReader(filename);
         } catch (Exception e) {
-            System.out.println(e.toString());
+            System.out.println(e.getMessage());
         }
 
         this.assemble();
@@ -318,7 +318,7 @@ public class Assembler {
                     lineNumber++;
                 } catch (Exception e) {
                     // if an exception occurred during assembly, catch it, add the line number, and throw a new one
-                    throw new Exception("Error on line " + lineNumber + ": " + e.toString());
+                    throw new Exception("Error on line " + lineNumber + ": " + e.getMessage());
                 }
             }
 
@@ -520,17 +520,5 @@ public class Assembler {
         this.currentOrigin = (short)0x8000; // default program origin is 0x8000
         this.rsAddress = (short)0x0200;  // default rs origin is 0x0200
         this.banks = new Vector<>();
-    }
-
-    public Assembler(String filename) {
-        this();
-
-        try {
-            asmIn = new FileReader(filename);
-        }
-        catch (java.io.FileNotFoundException e)
-        {
-            System.out.println(e.toString());
-        }
     }
 }
