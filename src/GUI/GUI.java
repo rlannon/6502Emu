@@ -63,6 +63,7 @@ public class GUI extends Application {
 
     private DrawGraphics gDrawer;
 
+    private TextArea registerMonitor;
     private TextArea userConsole;
 
     /*
@@ -99,12 +100,12 @@ public class GUI extends Application {
         primaryStage.setScene(primaryScene);
 
         // add the register and status monitor
-        TextArea registerMonitor = new TextArea();
+        registerMonitor = new TextArea();
         registerMonitor.setMaxWidth(256);
         registerMonitor.setMinHeight(200);
         registerMonitor.setEditable(false); // the user cannot modify the text content here, only the program can
         registerMonitor.setFont(Font.font("Courier New", FontWeight.NORMAL, 12));
-        registerMonitor.appendText("A: $00\nX: $00\nY: $00\n\nSP: $FF\n\nPC: $0000\n\nSTATUS:\n\tN V B - D I Z C\n\t0 0 1 1 0 0 0 0");
+        registerMonitor.appendText("A: $00\nX: $00\nY: $00\nSP: $FF\n\nPC: $0000\n\nSTATUS:\n\tN V B - D I Z C\n\t0 0 1 1 0 0 0 0");
 
         // create a label for the monitor
         Label regMonitorLabel = new Label("CPU Status");
@@ -134,8 +135,7 @@ public class GUI extends Application {
         screenLabel.setLabelFor(screen);
         rightCol.getChildren().add(screenLabel);
         rightCol.getChildren().add(screen);
-        screenContext.setFill(Color.BLACK);
-        screenContext.fillRect(0, 0, screenWidth * pxWidth, screenWidth * pxHeight);
+        clearScreen();
 
         // add the monitor and its label
         rightCol.getChildren().add(regMonitorLabel);
@@ -167,7 +167,8 @@ public class GUI extends Application {
                 }
 
                 // begin the thread
-                new Thread(gDrawer).start();
+                Thread drawerThread = new Thread(gDrawer);
+                drawerThread.start();
 
                 // execute our instructions
                 // todo: do we really need separate loops for emu.debugger.step and emu.step, considering emu.step checks for debug mode?
@@ -206,23 +207,28 @@ public class GUI extends Application {
                     }
                 }
 
+                // wait for the draw thread to finish
+                try {
+                    drawerThread.join();
+                } catch (InterruptedException e) {
+                    System.out.println("Interrupted. " + e.getMessage());
+                    this.stop();
+                }
+
                 // update our CPU monitor
-                updateCPUMonitor(registerMonitor);
+                updateCPUMonitor();
             }
         };
     }
 
-    public void updateGraphics() {
-        // todo: update screen graphics using concurrency
-    }
-
-    private void updateCPUMonitor(TextArea monitor) {
-        monitor.clear();
-        monitor.appendText(
-                String.format("A: $%02x\nX: $%02x\nY: $%02x\n\nPC: $%04x\n\nSTATUS:\n\tN V B - D I Z C\n\t0 0 1 1 0 0 0 0",
+    private void updateCPUMonitor() {
+        registerMonitor.clear();
+        registerMonitor.appendText(
+                String.format("A: $%02x\nX: $%02x\nY: $%02x\nSP: $%02x\n\nPC: $%04x\n\nSTATUS:\n\tN V B - D I Z C\n\t0 0 1 1 0 0 0 0",
                         emu.debugger.getA(),
                         emu.debugger.getX(),
                         emu.debugger.getY(),
+                        emu.debugger.getStackPointer(),
                         emu.debugger.getPC())
         );
     }
@@ -310,43 +316,103 @@ public class GUI extends Application {
             }
         });
 
+        // Create a display for our breakpoints
         Text breakpointHeader = new Text("Breakpoints");
         breakpointHeader.setFont(Font.font("Tahoma", FontWeight.NORMAL, 12));
         grid.add(breakpointHeader, 0, 0, 2, 1);
         grid.add(breakpoints, 0, 1, 4, 4);
 
-        for (Integer breakpoint: emu.debugger.getBreakpoints())
-            //breakpoints.getItems().add(String.format("$%04x", breakpoint));
-            breakpoints.getItems().add(breakpoint);
+        // update the view
+        updateBreakpointsListView(breakpoints);
 
         // Create some buttons for interactivity
-        Button deleteBreakpointsButton = new Button("Delete Breakpoints");
-        grid.add(deleteBreakpointsButton, 5, 1, 2, 1);
 
-        // Add functionality to the button
-        deleteBreakpointsButton.setOnAction(actionEvent -> {
-            // get the selected items
-            ObservableList<Integer> selectedBreakpoints = breakpoints.getSelectionModel().getSelectedItems();
+        // CPU step button
 
-            // only delete items if we have more than none selected
-            if (selectedBreakpoints.size() > 0) {
-                System.out.println("Deleting breakpoints:");
-                ListIterator e = selectedBreakpoints.listIterator();
-                for (Integer bp: selectedBreakpoints) {
-                    emu.debugger.removeBreakpoint(bp);
-                    breakpoints.getItems().remove(bp);
+        Button stepButton = new Button("Step");
+        grid.add(stepButton, 5, 1, 2, 1);
+
+        stepButton.setOnAction(actionEvent -> {
+            if (emu.isDebugMode() && emu.debugger.isPaused()) {
+                try {
+                    emu.debugger.step();
+                    updateCPUMonitor();
+                } catch (Exception e) {
+                    emu.terminate();
+                    userConsole.appendText("Error encountered: " + e.getMessage());
                 }
             } else {
-                // display an error alert
-                Alert selectedBreakpointsAlert = new Alert(Alert.AlertType.ERROR);
-                selectedBreakpointsAlert.setTitle("Invalid selection");
-                selectedBreakpointsAlert.setHeaderText("No breakpoints selected");
-                selectedBreakpointsAlert.setContentText("You must select breakpoints to delete them");
-                selectedBreakpointsAlert.show();
+                // todo: only allow button to be pressed when it is paused?
+                System.out.println("Cannot step when CPU is not paused");
             }
         });
 
+        // Continue
+        Button continueButton = new Button("Continue");
+        grid.add(continueButton, 5, 2, 2, 1);
+
+        continueButton.setOnAction(actionEvent -> {
+            emu.debugger.resume();
+            lastNMI = System.nanoTime();    // todo: refactor into 'continue' routine?
+            timer.start();
+        });
+
+        // Trigger NMI, graphics update buttons
+        Button triggerNMIButton = new Button("Trigger NMI");
+        grid.add(triggerNMIButton, 5, 3, 2, 1);
+
+        triggerNMIButton.setOnAction(actionEvent -> emu.nmi());
+
+        Button updateGraphicsButton = new Button("Update Graphics");
+        grid.add(updateGraphicsButton, 5, 4, 2, 1);
+
+        updateGraphicsButton.setOnAction(actionEvent -> {
+            Thread drawThread = new Thread(gDrawer);
+            drawThread.start();
+        });
+
+        // delete breakpoint
+        Button deleteBreakpointsButton = new Button("Delete Breakpoints");
+        grid.add(deleteBreakpointsButton, 5, 4, 2, 1);
+
+        // Add functionality to the button
+        deleteBreakpointsButton.setOnAction(actionEvent -> {
+            // todo: refactor this so it isn't a lambda, as we use use it elsewhere
+            // get the selected items
+            ObservableList<Integer> selectedBreakpoints = breakpoints.getSelectionModel().getSelectedItems();
+            // delete them
+            deleteBreakpoints(selectedBreakpoints);
+            // update the view
+            updateBreakpointsListView(breakpoints);
+        });
+
+        // display our panel
         debugStage.show();
+    }
+
+    private void deleteBreakpoints(ObservableList<Integer> toDelete) {
+        // delete breakpoints from our list
+
+        // only delete items if we have more than none selected
+        if (toDelete.size() > 0) {
+            for (Integer bp: toDelete) {
+                emu.debugger.removeBreakpoint(bp);
+            }
+        } else {
+            // display an error alert if we have none selected
+            Alert selectedBreakpointsAlert = new Alert(Alert.AlertType.ERROR);
+            selectedBreakpointsAlert.setTitle("Invalid selection");
+            selectedBreakpointsAlert.setHeaderText("No breakpoints selected");
+            selectedBreakpointsAlert.setContentText("You must select breakpoints to delete them");
+            selectedBreakpointsAlert.show();
+        }
+    }
+
+    private void updateBreakpointsListView(ListView<Integer> breakpoints) {
+        // Update the list view for 'breakpoints'
+        breakpoints.getItems().clear(); // first, clear the list
+        for (Integer breakpoint: emu.debugger.getBreakpoints()) // repopulate it
+            breakpoints.getItems().add(breakpoint);
     }
 
     private void addBreakpointDialog() {
@@ -449,11 +515,73 @@ public class GUI extends Application {
         }
     }
 
+    private void deleteBreakpointDialog() {
+        /*
+        Removes a breakpoint from the debugger using a dialog
+         */
+
+        Stage breakpointStage = new Stage();
+        breakpointStage.setTitle("Delete Breakpoint");
+
+        // Use a VBox for our dialog
+        VBox vb = new VBox(8);
+        vb.setSpacing(10);
+        vb.setPadding(new Insets(10, 10, 10, 10));
+        Scene breakpointScene = new Scene(vb, 256, 256);
+        breakpointStage.setScene(breakpointScene);
+
+        // List our breakpoints
+        ListView<Integer> breakpoints = new ListView<>();
+        breakpoints.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);   // allow multiple breakpoints to be selected
+
+        // set the cell factory to display the number as hexadecimal
+        breakpoints.setCellFactory(column -> new ListCell<>() {
+            @Override
+            protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    setText(String.format("$%04x", item));
+                }
+            }
+        });
+
+        // Create the delete button
+        Button deleteButton = new Button("Delete");
+        deleteButton.setOnAction(actionEvent -> {
+            // todo: update this when we refactor the function
+            // get the selected items
+            ObservableList<Integer> selectedBreakpoints = breakpoints.getSelectionModel().getSelectedItems();
+            // delete them
+            deleteBreakpoints(selectedBreakpoints);
+            // update the view
+            updateBreakpointsListView(breakpoints);
+        });
+
+        // add view and buttons to the vbox
+        vb.getChildren().addAll(breakpoints, deleteButton);
+
+        // update our view
+        updateBreakpointsListView(breakpoints);
+
+        // show the stage
+        breakpointStage.show();
+    }
+
     /*
 
     Constructor and setup methods
 
      */
+
+    private void clearScreen() {
+        // Clears the output screen by filling it with all black
+        screenContext.setFill(Color.BLACK);
+        screenContext.fillRect(0, 0, screenWidth * pxWidth, screenWidth * pxHeight);
+    }
 
     private MenuBar createMenu(Stage stage) {
         /*
@@ -493,6 +621,7 @@ public class GUI extends Application {
             if (file != null) {
                 try {
                     emu.addBinary(file.getAbsolutePath());
+                    emu.debugger.pause();
                     userConsole.appendText("Successfully opened file.\n");
                 } catch (Exception e) {
                     Alert fileAlert = new Alert(Alert.AlertType.ERROR);
@@ -572,15 +701,10 @@ public class GUI extends Application {
          */
         final Menu runMenu = new Menu("Run");
         MenuItem runOption = new MenuItem("Run...");
-        MenuItem debugOption = new MenuItem("Debug...");
         MenuItem stopOption = new MenuItem("Terminate");
         MenuItem resetOption = new MenuItem("Reset");
-        MenuItem debuggerPanelOption = new MenuItem("Open Debugger Panel");
-        MenuItem addBreakpointOption = new MenuItem("Add Breakpoint...");
-        MenuItem removeBreakpointOption = new MenuItem("Remove Breakpoint...");
 
-        runMenu.getItems().addAll(runOption, debugOption, new SeparatorMenuItem(), stopOption, resetOption,
-                new SeparatorMenuItem(), debuggerPanelOption, addBreakpointOption, removeBreakpointOption);
+        runMenu.getItems().addAll(runOption, stopOption, resetOption);
 
         runOption.setOnAction(actionEvent -> {
             // Run program
@@ -593,17 +717,7 @@ public class GUI extends Application {
                 coreDumpAlert.show();
             }
             emu.setDebugMode(false);
-            emu.reset();
-            lastNMI = System.nanoTime();
-            timer.start();
-        });
-
-        debugOption.setOnAction(actionEvent -> {
-            // Run a program in debug mode
-            userConsole.appendText("Debugging...\n");
-            emu.debugger.setGenCoreDump(genCoreDumpProperty.get());
-            displayDebugPanel();  // display debugger panel
-            emu.setDebugMode(true); // run in debug mode
+            emu.debugger.resume();
             emu.reset();
             lastNMI = System.nanoTime();
             timer.start();
@@ -623,11 +737,41 @@ public class GUI extends Application {
             emu.terminate();
             timer.stop();
 
-            // Then, reset
+            // Then, reset the CPU, clear the screen and the monitor, and mark that the CPU is paused
             emu.reset();
+            updateCPUMonitor();
+            clearScreen();
+            emu.debugger.pause();
 
             // Print a message in the log
             userConsole.appendText("Reset.\n");
+        });
+
+        /*
+
+        Debug Menu
+
+         */
+        final Menu debugMenu = new Menu("Debug");
+        MenuItem debugOption = new MenuItem("Debug...");
+        MenuItem debuggerPanelOption = new MenuItem("Open Debugger Panel");
+        MenuItem addBreakpointOption = new MenuItem("Add Breakpoint...");
+        MenuItem removeBreakpointOption = new MenuItem("Delete Breakpoint...");
+        CheckMenuItem enableDebugMode = new CheckMenuItem("Enable Debug Mode");
+        debugMenu.getItems().addAll(debugOption, debuggerPanelOption, new SeparatorMenuItem(), addBreakpointOption,
+                removeBreakpointOption, new SeparatorMenuItem(), enableDebugMode);
+
+        debugOption.setOnAction(actionEvent -> {
+            // Run a program in debug mode
+            userConsole.appendText("Debugging...\n");
+            emu.debugger.setGenCoreDump(genCoreDumpProperty.get());
+            displayDebugPanel();  // display debugger panel
+            emu.setDebugMode(true); // run in debug mode
+            enableDebugMode.setSelected(true);
+            emu.debugger.resume();
+            emu.reset();
+            lastNMI = System.nanoTime();
+            timer.start();
         });
 
         debuggerPanelOption.setOnAction(actionEvent -> {
@@ -642,10 +786,15 @@ public class GUI extends Application {
 
         removeBreakpointOption.setOnAction(actionEvent ->  {
             // Remove a breakpoint using the breakpoint dialog
+            deleteBreakpointDialog();
+        });
+
+        enableDebugMode.setOnAction(actionEvent -> {
+            emu.setDebugMode(enableDebugMode.selectedProperty().get());
         });
 
         // Create the MenuBar
-        menu.getMenus().addAll(fileMenu, toolsMenu, runMenu);
+        menu.getMenus().addAll(fileMenu, toolsMenu, runMenu, debugMenu);
 
         // return the MenuBar
         return menu;
@@ -653,7 +802,7 @@ public class GUI extends Application {
 
     public GUI() {
         this.emu = new Emulator(this);
-        this.INSTRUCTIONS_PER_FRAME = 8_000;
+        this.INSTRUCTIONS_PER_FRAME = 5_000;
         this.screen = new Canvas(screenWidth * pxWidth, screenWidth * pxHeight);
         this.screenContext = screen.getGraphicsContext2D();
         this.lastNMI = 0;

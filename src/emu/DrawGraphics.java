@@ -24,7 +24,6 @@ public class DrawGraphics implements Runnable {
 
     public void run() {
         // Executes the graphics drawing thread
-        System.out.println("Drawing graphics");
 
         try {
             Thread.sleep(1);    // wait 1ms before drawing graphics to allow NMI time to execute
@@ -90,7 +89,7 @@ public class DrawGraphics implements Runnable {
         }
     }
 
-    void join() throws InterruptedException {
+    public void join() throws InterruptedException {
         if (t != null) {
             t.join();
         }

@@ -94,7 +94,7 @@ public class Debugger {
 
     */
 
-    void pause() {
+    public void pause() {
         // temporarily halts the CPU
         this.paused = true;
     }
