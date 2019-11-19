@@ -35,6 +35,8 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.util.List;
+import java.util.ListIterator;
 
 public class GUI extends Application {
     /*
@@ -87,33 +89,31 @@ public class GUI extends Application {
         hbox.setSpacing(10);
         VBox leftCol = new VBox();
         leftCol.setSpacing(10);
+        leftCol.setPadding(new Insets(10, 10, 10, 10));
         VBox rightCol = new VBox();
         rightCol.setSpacing(10);
+        rightCol.setPadding(new Insets(10, 10, 10, 10));
         outer.getChildren().add(hbox);
         hbox.getChildren().addAll(leftCol, rightCol);
-        Scene primaryScene = new Scene(outer, 1000, 500);
+        Scene primaryScene = new Scene(outer, 700, 600);
         primaryStage.setScene(primaryScene);
 
         // add the register and status monitor
         TextArea registerMonitor = new TextArea();
-        registerMonitor.setMaxWidth(300);
+        registerMonitor.setMaxWidth(256);
         registerMonitor.setMinHeight(200);
         registerMonitor.setEditable(false); // the user cannot modify the text content here, only the program can
         registerMonitor.setFont(Font.font("Courier New", FontWeight.NORMAL, 12));
-        registerMonitor.appendText("A: $00\nX: $00\nY: $00\n\nPC: $0000\n\nSTATUS:\n\tN V B - D I Z C\n\t0 0 1 1 0 0 0 0");
+        registerMonitor.appendText("A: $00\nX: $00\nY: $00\n\nSP: $FF\n\nPC: $0000\n\nSTATUS:\n\tN V B - D I Z C\n\t0 0 1 1 0 0 0 0");
 
         // create a label for the monitor
         Label regMonitorLabel = new Label("CPU Status");
         regMonitorLabel.setLabelFor(registerMonitor);
 
-        // add the monitor and its label
-        leftCol.getChildren().add(regMonitorLabel);
-        leftCol.getChildren().add(registerMonitor);
-
         // create the information/error console
         userConsole = new TextArea();
-        userConsole.setMaxWidth(300);
-        userConsole.setMinHeight(200);
+        userConsole.setMaxWidth(256);
+        userConsole.setMinHeight(500);
         userConsole.setEditable(false);
         userConsole.setFont(Font.font("Courier New", FontWeight.NORMAL, 12));
 
@@ -123,7 +123,13 @@ public class GUI extends Application {
         leftCol.getChildren().add(consoleLabel);
         leftCol.getChildren().add(userConsole);
 
-        // todo: create a canvas and allow graphics updates
+        /*
+
+        Right Column
+
+         */
+
+        // Add the screen
         Label screenLabel = new Label("Screen");
         screenLabel.setLabelFor(screen);
         rightCol.getChildren().add(screenLabel);
@@ -131,11 +137,14 @@ public class GUI extends Application {
         screenContext.setFill(Color.BLACK);
         screenContext.fillRect(0, 0, screenWidth * pxWidth, screenWidth * pxHeight);
 
+        // add the monitor and its label
+        rightCol.getChildren().add(regMonitorLabel);
+        rightCol.getChildren().add(registerMonitor);
+
+        // finally, show the stage
         primaryStage.show();
 
-        // todo: run a loop _here_ to execute the program
-        // todo: use an AnimationTimer to trigger NMIs in the emulator loop
-
+        // we will use an animation timer to control CPU speed
         timer = new AnimationTimer() {
             /*
 
@@ -272,6 +281,7 @@ public class GUI extends Application {
         Stage debugStage = new Stage();
         debugStage.setTitle("Debugger Panel");
 
+        // Create the gridpane
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER_LEFT);
         grid.setHgap(10);
@@ -281,14 +291,60 @@ public class GUI extends Application {
         Scene debugScene = new Scene(grid, 500, 250);
         debugStage.setScene(debugScene);
 
+        // List our breakpoints
         ListView<Integer> breakpoints = new ListView<>();
+        breakpoints.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);   // allow multiple items to be selected
+
+        // set the cell factory to display the number as hexadecimal
+        breakpoints.setCellFactory(column -> new ListCell<>() {
+            @Override
+            protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    setText(String.format("$%04x", item));
+                }
+            }
+        });
+
         Text breakpointHeader = new Text("Breakpoints");
         breakpointHeader.setFont(Font.font("Tahoma", FontWeight.NORMAL, 12));
         grid.add(breakpointHeader, 0, 0, 2, 1);
         grid.add(breakpoints, 0, 1, 4, 4);
 
         for (Integer breakpoint: emu.debugger.getBreakpoints())
+            //breakpoints.getItems().add(String.format("$%04x", breakpoint));
             breakpoints.getItems().add(breakpoint);
+
+        // Create some buttons for interactivity
+        Button deleteBreakpointsButton = new Button("Delete Breakpoints");
+        grid.add(deleteBreakpointsButton, 5, 1, 2, 1);
+
+        // Add functionality to the button
+        deleteBreakpointsButton.setOnAction(actionEvent -> {
+            // get the selected items
+            ObservableList<Integer> selectedBreakpoints = breakpoints.getSelectionModel().getSelectedItems();
+
+            // only delete items if we have more than none selected
+            if (selectedBreakpoints.size() > 0) {
+                System.out.println("Deleting breakpoints:");
+                ListIterator e = selectedBreakpoints.listIterator();
+                for (Integer bp: selectedBreakpoints) {
+                    emu.debugger.removeBreakpoint(bp);
+                    breakpoints.getItems().remove(bp);
+                }
+            } else {
+                // display an error alert
+                Alert selectedBreakpointsAlert = new Alert(Alert.AlertType.ERROR);
+                selectedBreakpointsAlert.setTitle("Invalid selection");
+                selectedBreakpointsAlert.setHeaderText("No breakpoints selected");
+                selectedBreakpointsAlert.setContentText("You must select breakpoints to delete them");
+                selectedBreakpointsAlert.show();
+            }
+        });
 
         debugStage.show();
     }
@@ -478,8 +534,7 @@ public class GUI extends Application {
             FileChooser fileChooser = new FileChooser();
             fileChooser.getExtensionFilters().addAll(
                     new FileChooser.ExtensionFilter("All files", "*.*"),
-                    new FileChooser.ExtensionFilter("S File", "*.s"),
-                    new FileChooser.ExtensionFilter("ASM File", "*.asm")
+                    new FileChooser.ExtensionFilter("Assembly Files", "*.s", "*.S", "*.asm")
             );
             File asmFile = fileChooser.showOpenDialog(stage);
 
