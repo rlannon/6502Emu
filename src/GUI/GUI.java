@@ -72,6 +72,101 @@ public class GUI extends Application {
 
      */
 
+    /*
+
+    Functionality
+
+     */
+
+    private void deleteBreakpoints(ObservableList<Integer> toDelete) {
+        // delete breakpoints from our list
+
+        // only delete items if we have more than none selected
+        if (toDelete.size() > 0) {
+            for (Integer bp: toDelete) {
+                emu.debugger.removeBreakpoint(bp);
+            }
+        } else {
+            // display an error alert if we have none selected
+            Alert selectedBreakpointsAlert = new Alert(Alert.AlertType.ERROR);
+            selectedBreakpointsAlert.setTitle("Invalid selection");
+            selectedBreakpointsAlert.setHeaderText("No breakpoints selected");
+            selectedBreakpointsAlert.setContentText("You must select breakpoints to delete them");
+            selectedBreakpointsAlert.show();
+        }
+    }
+
+    private boolean addBreakpoint(String what, String where) {
+        /*
+         Adds a breakpoint to the emulator's debugger
+         Returns whether the breakpoint was added successfully
+
+         @param what    Whether the breakpoint is a label, address, or line number
+         @param where   The data in the textfield (actual label name, address, or line number)
+         @param stage   The stage onto which we should place the alert dialog
+         @return    boolean
+         */
+
+        Alert failureAlert = new Alert(Alert.AlertType.ERROR);
+        failureAlert.setTitle("Error");
+
+        if (what.equals("Address")) {
+            try {
+                int address = Integer.parseInt(where, 16);
+                if (address >= 0 && address < 65536) {
+                    emu.debugger.setBreakpoint(address);
+                    return true;
+                } else {
+                    throw new Exception("Address out of range");
+                }
+            } catch (NumberFormatException n) {
+                failureAlert.setHeaderText("Invalid address");
+                failureAlert.setContentText("You must enter a valid hexadecimal number");
+                failureAlert.show();
+                return false;
+            } catch (Exception e) {
+                failureAlert.setHeaderText("Invalid address");
+                failureAlert.setContentText(e.getMessage());
+                failureAlert.show();
+                return false;
+            }
+        } else if (what.equals("Label")) {
+            try {
+                emu.debugger.setBreakpoint(where);
+                return true;
+            } catch (Exception e){
+                failureAlert.setHeaderText("Label not found");
+                failureAlert.setContentText("Label does not exist in the debugger's symbol table");
+                failureAlert.show();
+                return false;
+            }
+        } else {
+            try {
+                int lineNumber = Integer.parseInt(where);
+                emu.debugger.setBreakpointByLineNumber(lineNumber);
+                return true;
+            } catch (Exception e) {
+                failureAlert.setHeaderText("Invalid line number");
+                failureAlert.setContentText(e.getMessage());
+                failureAlert.show();
+                return false;
+            }
+        }
+    }
+
+    private void resume() {
+        // Resume CPU execution after a pause
+        emu.debugger.resume();
+        lastNMI = System.nanoTime();
+        timer.start();
+    }
+
+    /*
+
+    Main methods
+
+     */
+
     public static void main(String[] args) {
         // launch the program
 
@@ -171,7 +266,6 @@ public class GUI extends Application {
                 drawerThread.start();
 
                 // execute our instructions
-                // todo: do we really need separate loops for emu.debugger.step and emu.step, considering emu.step checks for debug mode?
                 int i = 0;
                 if (emu.isDebugMode()) {
                     while (!emu.debugger.isPaused() && emu.isRunning() && i < INSTRUCTIONS_PER_FRAME) {
@@ -320,7 +414,7 @@ public class GUI extends Application {
         Text breakpointHeader = new Text("Breakpoints");
         breakpointHeader.setFont(Font.font("Tahoma", FontWeight.NORMAL, 12));
         grid.add(breakpointHeader, 0, 0, 2, 1);
-        grid.add(breakpoints, 0, 1, 4, 4);
+        grid.add(breakpoints, 0, 1, 4, 5);
 
         // update the view
         updateBreakpointsListView(breakpoints);
@@ -339,7 +433,7 @@ public class GUI extends Application {
                     updateCPUMonitor();
                 } catch (Exception e) {
                     emu.terminate();
-                    userConsole.appendText("Error encountered: " + e.getMessage());
+                    userConsole.appendText("Error encountered: " + e.getMessage() + "\n");
                 }
             } else {
                 // todo: only allow button to be pressed when it is paused?
@@ -352,9 +446,13 @@ public class GUI extends Application {
         grid.add(continueButton, 5, 2, 2, 1);
 
         continueButton.setOnAction(actionEvent -> {
-            emu.debugger.resume();
-            lastNMI = System.nanoTime();    // todo: refactor into 'continue' routine?
-            timer.start();
+            // we need to step once before we can resume
+            try {
+                emu.debugger.step();
+                resume();
+            } catch (Exception e) {
+                userConsole.appendText("Could not continue: " + e.getMessage() + "\n");
+            }
         });
 
         // Trigger NMI, graphics update buttons
@@ -373,7 +471,7 @@ public class GUI extends Application {
 
         // delete breakpoint
         Button deleteBreakpointsButton = new Button("Delete Breakpoints");
-        grid.add(deleteBreakpointsButton, 5, 4, 2, 1);
+        grid.add(deleteBreakpointsButton, 5, 5, 2, 1);
 
         // Add functionality to the button
         deleteBreakpointsButton.setOnAction(actionEvent -> {
@@ -388,24 +486,6 @@ public class GUI extends Application {
 
         // display our panel
         debugStage.show();
-    }
-
-    private void deleteBreakpoints(ObservableList<Integer> toDelete) {
-        // delete breakpoints from our list
-
-        // only delete items if we have more than none selected
-        if (toDelete.size() > 0) {
-            for (Integer bp: toDelete) {
-                emu.debugger.removeBreakpoint(bp);
-            }
-        } else {
-            // display an error alert if we have none selected
-            Alert selectedBreakpointsAlert = new Alert(Alert.AlertType.ERROR);
-            selectedBreakpointsAlert.setTitle("Invalid selection");
-            selectedBreakpointsAlert.setHeaderText("No breakpoints selected");
-            selectedBreakpointsAlert.setContentText("You must select breakpoints to delete them");
-            selectedBreakpointsAlert.show();
-        }
     }
 
     private void updateBreakpointsListView(ListView<Integer> breakpoints) {
@@ -455,64 +535,6 @@ public class GUI extends Application {
         });
 
         breakpointStage.show();
-    }
-
-    private boolean addBreakpoint(String what, String where) {
-        /*
-         Adds a breakpoint to the emulator's debugger
-         Returns whether the breakpoint was added successfully
-
-         @param what    Whether the breakpoint is a label, address, or line number
-         @param where   The data in the textfield (actual label name, address, or line number)
-         @param stage   The stage onto which we should place the alert dialog
-         @return    boolean
-         */
-
-        Alert failureAlert = new Alert(Alert.AlertType.ERROR);
-        failureAlert.setTitle("Error");
-
-        if (what.equals("Address")) {
-            try {
-                int address = Integer.parseInt(where, 16);
-                if (address >= 0 && address < 65536) {
-                    emu.debugger.setBreakpoint(address);
-                    return true;
-                } else {
-                    throw new Exception("Address out of range");
-                }
-            } catch (NumberFormatException n) {
-                failureAlert.setHeaderText("Invalid address");
-                failureAlert.setContentText("You must enter a valid hexadecimal number");
-                failureAlert.show();
-                return false;
-            } catch (Exception e) {
-                failureAlert.setHeaderText("Invalid address");
-                failureAlert.setContentText(e.getMessage());
-                failureAlert.show();
-                return false;
-            }
-        } else if (what.equals("Label")) {
-            try {
-                emu.debugger.setBreakpoint(where);
-                return true;
-            } catch (Exception e){
-                failureAlert.setHeaderText("Label not found");
-                failureAlert.setContentText("Label does not exist in the debugger's symbol table");
-                failureAlert.show();
-                return false;
-            }
-        } else {
-            try {
-                int lineNumber = Integer.parseInt(where);
-                emu.debugger.setBreakpointByLineNumber(lineNumber);
-                return true;
-            } catch (Exception e) {
-                failureAlert.setHeaderText("Invalid line number");
-                failureAlert.setContentText(e.getMessage());
-                failureAlert.show();
-                return false;
-            }
-        }
     }
 
     private void deleteBreakpointDialog() {
@@ -717,10 +739,8 @@ public class GUI extends Application {
                 coreDumpAlert.show();
             }
             emu.setDebugMode(false);
-            emu.debugger.resume();
             emu.reset();
-            lastNMI = System.nanoTime();
-            timer.start();
+            resume();
         });
 
         stopOption.setOnAction(actionEvent -> {
@@ -768,10 +788,8 @@ public class GUI extends Application {
             displayDebugPanel();  // display debugger panel
             emu.setDebugMode(true); // run in debug mode
             enableDebugMode.setSelected(true);
-            emu.debugger.resume();
             emu.reset();
-            lastNMI = System.nanoTime();
-            timer.start();
+            resume();
         });
 
         debuggerPanelOption.setOnAction(actionEvent -> {

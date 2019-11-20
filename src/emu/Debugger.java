@@ -127,10 +127,14 @@ public class Debugger {
     public void step() throws Exception {
         // steps the CPU one time; if a breakpoint is encountered, pauses
 
-        if (this.breakpoints.containsKey(this.cpu.pc)) {
-            this.pause();
-        } else {
+        if (this.isPaused()) {
             this.cpu.step();
+        } else {
+            if (this.breakpoints.containsKey(this.cpu.pc)) {
+                this.pause();
+            } else {
+                this.cpu.step();
+            }
         }
     }
 
