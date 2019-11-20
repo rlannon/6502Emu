@@ -14,8 +14,8 @@ public class DrawGraphics implements Runnable {
 
      */
 
-    final int BUFFER_MIN = 0x2400;  // the beginning of the graphics buffer
-    final int BUFFER_LEN = GUI.screenWidth * GUI.screenWidth;    // the length of that buffer
+    private final int BUFFER_MIN = 0x2400;  // the beginning of the graphics buffer
+    private final int BUFFER_LEN = GUI.screenWidth * GUI.screenWidth;    // the length of that buffer
 
     private Thread t;
     private String threadName;

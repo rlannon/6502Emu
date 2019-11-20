@@ -1488,7 +1488,7 @@ public class CPU {
     private void pushToStack(byte data) {
         // pushes a byte onto the stack
 
-        int address = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
+        int address = ((STACK_HIGH << 8) | (this.sp & 0xFF)) & 0xFFFF;
         this.memory[address] = data;
         this.sp--;
     }
@@ -1497,7 +1497,7 @@ public class CPU {
         // pulls a byte from the stack and returns it
 
         this.sp++;
-        int address = ((STACK_HIGH << 8) | this.sp) & 0xFFFF;
+        int address = ((STACK_HIGH << 8) | (this.sp & 0xFF)) & 0xFFFF;
         return this.memory[address];
     }
 
