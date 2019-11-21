@@ -3,15 +3,8 @@ package emu;
 import GUI.GUI;
 import assembler.Assembler;
 import emu_format.EmuFile;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.stage.Stage;
-
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ConcurrentModificationException;
-import java.util.Date;
 import java.util.Vector;
 
 public class Emulator {
@@ -19,7 +12,6 @@ public class Emulator {
     final int NMI_REFRESH = 33;    // an NMI every 33 milliseconds (1/30 of a second)
 
     private GUI gui;
-    private GraphicsContext gc; // the graphics context for the screen (Canvas)
 
     private CPU cpu;    // the CPU we are running; automatically creates debugger
     public Debugger debugger;
@@ -167,10 +159,6 @@ public class Emulator {
         }
     }
 
-    public void setGraphicsContext(GraphicsContext gc) {
-        this.gc = gc;
-    }
-
     public void setDebugMode(boolean mode) {
         this.debugMode = mode;
     }
@@ -202,7 +190,6 @@ public class Emulator {
         this.inputs = new Vector<>();
 
         this.gui = null;
-        this.gc = null;
     }
 
     public Emulator(boolean debug) {
@@ -213,11 +200,5 @@ public class Emulator {
     public Emulator(GUI gui) {
         this();
         this.gui = gui;
-    }
-
-    public Emulator(GraphicsContext gc) {
-        // create a new emulator with a graphics context specified
-        this();
-        this.gc = gc;
     }
 }

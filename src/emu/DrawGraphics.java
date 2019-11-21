@@ -61,6 +61,24 @@ public class DrawGraphics implements Runnable {
                     case 9:
                         color = Color.BROWN;
                         break;
+                    case 10:
+                        color = Color.PINK;
+                        break;
+                    case 11:
+                        color = Color.DARKGRAY;
+                        break;
+                    case 12:
+                        color = Color.GRAY;
+                        break;
+                    case 13:
+                        color = Color.LIGHTGREEN;
+                        break;
+                    case 14:
+                        color = Color.LIGHTBLUE;
+                        break;
+                    case 15:
+                        color = Color.LIGHTGRAY;
+                        break;
                     default:
                         color = Color.BLACK;
                         break;

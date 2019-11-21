@@ -96,7 +96,7 @@ public class EmuFile {
 
         try
         {
-            out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(filename)));
+            out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(filename + ".emu")));
             // write the header
             out.write(MAGIC_NUMBER); // magic number
             out.writeByte((byte)prgBanks.size());   // number of banks

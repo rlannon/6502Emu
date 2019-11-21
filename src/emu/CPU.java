@@ -1593,6 +1593,9 @@ public class CPU {
                 int address = segment.getOrg() & 0xFFFF;
                 byte[] data = segment.getData();
 
+                // add the segment to the debugger
+                this.debugger.addSegment(address, data.length);
+
                 // set our debugger's pages used if we are in debug mode
                 int pageIndex = (data.length / 256);
                 int pageNumber = (address >> 8) & 0xFF;

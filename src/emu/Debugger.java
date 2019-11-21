@@ -1,14 +1,12 @@
 package emu;
 
 import assembler.DebugSymbol;
+import javafx.util.Pair;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Hashtable;
-import java.util.Vector;
+import java.util.*;
 
 public class Debugger {
     // The debugger for our CPU
@@ -17,9 +15,10 @@ public class Debugger {
     private boolean paused;   // whether we have stoped the CPU
     private boolean genCoreDump;    // whether we should generate a core dump on termination
     private boolean[] pagesUsed;    // tracks which pages have been touched by the CPU
+    private ArrayList<Pair<Integer, Integer>> segments;    // tracks where our segments are
     Hashtable<Integer, Boolean> breakpoints;  // the breakpoints we have set
-    Hashtable<String, Integer> labels; // symbols and their addresses
-    Hashtable<Integer, Integer> lineNumbers;    // line numbers and their addresses
+    private Hashtable<String, Integer> labels; // symbols and their addresses
+    private Hashtable<Integer, Integer> lineNumbers;    // line numbers and their addresses
 
     /*
 
@@ -36,19 +35,17 @@ public class Debugger {
         this.breakpoints.put(address, Boolean.TRUE);
     }
 
-    public void setBreakpointByLineNumber(int lineNumber) throws Exception {
+    public int getAddressFromLineNumber(int lineNumber) throws Exception {
         if (this.lineNumbers.containsKey(lineNumber)) {
-            int address = this.lineNumbers.get(lineNumber);
-            this.breakpoints.put(address, Boolean.TRUE);
+            return this.lineNumbers.get(lineNumber);
         } else {
             throw new Exception("No such line number in file");
         }
     }
 
-    public void setBreakpoint(String label) throws Exception {
+    public int getAddressFromLabel(String label) throws Exception {
         if (this.labels.containsKey(label)) {
-            int address = this.labels.get(label);
-            this.breakpoints.put(address, Boolean.TRUE);
+            return this.labels.get(label);
         } else {
             throw new Exception("No such label found in debug symbols");
         }
@@ -85,6 +82,11 @@ public class Debugger {
             // add the line number data to "lineNumbers"
             this.lineNumbers.put(sym.getLine(), sym.getAddress() & 0xFFFF);
         }
+    }
+
+    void addSegment(int begin, int length) {
+        // Adds a segment to the debugger's list of code segments
+        this.segments.add(new Pair<>(begin, length));
     }
 
     /*
@@ -135,6 +137,14 @@ public class Debugger {
             } else {
                 this.cpu.step();
             }
+        }
+    }
+
+    public void jump(int address) throws Exception {
+        if (this.isPaused()) {
+            this.cpu.pc = address;
+        } else {
+            throw new Exception("CPU must be paused to perform this operation");
         }
     }
 
@@ -217,6 +227,7 @@ public class Debugger {
         this.paused = false;
         this.pagesUsed = new boolean[256];  // all initialized to false
         this.pagesUsed[1] = true;   // we will always include the stack in a core dump
+        this.segments = new ArrayList<>();
         this.breakpoints = new Hashtable<>();
         this.lineNumbers = new Hashtable<>();
         this.labels = new Hashtable<>();

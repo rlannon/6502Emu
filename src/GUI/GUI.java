@@ -33,10 +33,10 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Pair;
 
 import java.io.File;
 import java.util.List;
-import java.util.ListIterator;
 
 public class GUI extends Application {
     /*
@@ -96,7 +96,7 @@ public class GUI extends Application {
         }
     }
 
-    private boolean addBreakpoint(String what, String where) {
+    private void addBreakpoint(String what, String where) {
         /*
          Adds a breakpoint to the emulator's debugger
          Returns whether the breakpoint was added successfully
@@ -114,8 +114,7 @@ public class GUI extends Application {
             try {
                 int address = Integer.parseInt(where, 16);
                 if (address >= 0 && address < 65536) {
-                    emu.debugger.setBreakpoint(address);
-                    return true;
+                    emu.debugger.setBreakpoint(address);    // todo: use a predicate function here to allow more modularization
                 } else {
                     throw new Exception("Address out of range");
                 }
@@ -123,33 +122,104 @@ public class GUI extends Application {
                 failureAlert.setHeaderText("Invalid address");
                 failureAlert.setContentText("You must enter a valid hexadecimal number");
                 failureAlert.show();
-                return false;
             } catch (Exception e) {
                 failureAlert.setHeaderText("Invalid address");
                 failureAlert.setContentText(e.getMessage());
                 failureAlert.show();
-                return false;
             }
         } else if (what.equals("Label")) {
             try {
-                emu.debugger.setBreakpoint(where);
-                return true;
+                emu.debugger.setBreakpoint(emu.debugger.getAddressFromLabel(where));
             } catch (Exception e){
                 failureAlert.setHeaderText("Label not found");
                 failureAlert.setContentText("Label does not exist in the debugger's symbol table");
                 failureAlert.show();
-                return false;
             }
         } else {
             try {
                 int lineNumber = Integer.parseInt(where);
-                emu.debugger.setBreakpointByLineNumber(lineNumber);
-                return true;
+                emu.debugger.setBreakpoint(emu.debugger.getAddressFromLineNumber(lineNumber));
             } catch (Exception e) {
                 failureAlert.setHeaderText("Invalid line number");
                 failureAlert.setContentText(e.getMessage());
                 failureAlert.show();
-                return false;
+            }
+        }
+    }
+
+    private String[] getAddress(String title) {
+        Stage addressStage = new Stage();
+        addressStage.setTitle(title);
+
+        HBox hb = new HBox(8);
+        Scene addressScene = new Scene(hb, 350, 30);
+        addressStage.setScene(addressScene);
+
+        ObservableList<String> options =
+                FXCollections.observableArrayList(
+                        "Address",
+                        "Line Number",
+                        "Label"
+                );
+        final ComboBox<String> bpOptions = new ComboBox<>(options);
+        bpOptions.setValue("Address");
+        hb.getChildren().add(bpOptions);
+
+        TextField data = new TextField();
+        hb.getChildren().add(data);
+
+        Button addButton = new Button("Add");
+        addButton.setMaxWidth(100);
+        hb.getChildren().add(addButton);
+
+        final String[] toReturn = new String[2];
+
+        addButton.setOnAction(actionEvent -> {
+            toReturn[0] = bpOptions.getValue();
+            toReturn[1] = data.getCharacters().toString();
+            addressStage.close();
+        });
+
+        addressStage.showAndWait();
+        return toReturn;
+    }
+
+    private void jump(String type, String data) {
+        Alert failureAlert = new Alert(Alert.AlertType.ERROR);
+
+        if (type.equals("Address")) {
+            try {
+                int address = Integer.parseInt(data, 16);
+                if (address >= 0 && address < 65536) {
+                    emu.debugger.jump(address);
+                } else {
+                    throw new Exception("Address out of range");
+                }
+            } catch (NumberFormatException n) {
+                failureAlert.setHeaderText("Invalid address");
+                failureAlert.setContentText("You must enter a valid hexadecimal number");
+                failureAlert.show();
+            } catch (Exception e) {
+                failureAlert.setHeaderText("Invalid address");
+                failureAlert.setContentText(e.getMessage());
+                failureAlert.show();
+            }
+        } else if (type.equals("Label")) {
+            try {
+                emu.debugger.jump(emu.debugger.getAddressFromLabel(type));
+            } catch (Exception e){
+                failureAlert.setHeaderText("Label not found");
+                failureAlert.setContentText("Label does not exist in the debugger's symbol table");
+                failureAlert.show();
+            }
+        } else {
+            try {
+                int lineNumber = Integer.parseInt(data);
+                emu.debugger.jump(emu.debugger.getAddressFromLineNumber(lineNumber));
+            } catch (Exception e) {
+                failureAlert.setHeaderText("Invalid line number");
+                failureAlert.setContentText(e.getMessage());
+                failureAlert.show();
             }
         }
     }
@@ -421,6 +491,27 @@ public class GUI extends Application {
 
         // Create some buttons for interactivity
 
+        // add breakpoing
+        Button addBreakpointButton = new Button("Add Breakpoint");
+        grid.add(addBreakpointButton, 0, 6, 2, 1);
+        addBreakpointButton.setOnAction(actionEvent -> {
+            addBreakpointDialog();
+            updateBreakpointsListView(breakpoints);
+        });
+
+        // delete breakpoint
+        Button deleteBreakpointsButton = new Button("Delete Breakpoints");
+        grid.add(deleteBreakpointsButton, 2, 6, 2, 1);
+        deleteBreakpointsButton.setOnAction(actionEvent -> {
+            // todo: refactor this so it isn't a lambda, as we use use it elsewhere
+            // get the selected items
+            ObservableList<Integer> selectedBreakpoints = breakpoints.getSelectionModel().getSelectedItems();
+            // delete them
+            deleteBreakpoints(selectedBreakpoints);
+            // update the view
+            updateBreakpointsListView(breakpoints);
+        });
+
         // CPU step button
 
         Button stepButton = new Button("Step");
@@ -455,33 +546,36 @@ public class GUI extends Application {
             }
         });
 
+        // Jump
+        Button jumpButton = new Button("Set PC...");
+        grid.add(jumpButton, 5, 3, 2, 1);
+        jumpButton.setOnAction(actionEvent -> {
+            String[] values = getAddress("Select Address");
+            try {
+                if (values[0] != null)
+                    jump(values[0], values[1]); // todo: if alert is displayed, keep dialog open?
+            } catch (Exception e) {
+                Alert debuggerAlert = new Alert(Alert.AlertType.ERROR);
+                debuggerAlert.setTitle("Error");
+                debuggerAlert.setHeaderText("Could not set PC");
+                debuggerAlert.setContentText(e.getMessage());
+                debuggerAlert.show();
+            }
+        });
+
         // Trigger NMI, graphics update buttons
         Button triggerNMIButton = new Button("Trigger NMI");
-        grid.add(triggerNMIButton, 5, 3, 2, 1);
+        grid.add(triggerNMIButton, 5, 5, 2, 1);
 
         triggerNMIButton.setOnAction(actionEvent -> emu.nmi());
 
+        // We should also have a button that triggers a graphics update, since the timer is disabled when debugging
         Button updateGraphicsButton = new Button("Update Graphics");
-        grid.add(updateGraphicsButton, 5, 4, 2, 1);
+        grid.add(updateGraphicsButton, 5, 6, 2, 1);
 
         updateGraphicsButton.setOnAction(actionEvent -> {
             Thread drawThread = new Thread(gDrawer);
             drawThread.start();
-        });
-
-        // delete breakpoint
-        Button deleteBreakpointsButton = new Button("Delete Breakpoints");
-        grid.add(deleteBreakpointsButton, 5, 5, 2, 1);
-
-        // Add functionality to the button
-        deleteBreakpointsButton.setOnAction(actionEvent -> {
-            // todo: refactor this so it isn't a lambda, as we use use it elsewhere
-            // get the selected items
-            ObservableList<Integer> selectedBreakpoints = breakpoints.getSelectionModel().getSelectedItems();
-            // delete them
-            deleteBreakpoints(selectedBreakpoints);
-            // update the view
-            updateBreakpointsListView(breakpoints);
         });
 
         // display our panel
@@ -501,40 +595,9 @@ public class GUI extends Application {
         This calls the function 'addBreakpoint' to actually add the data
          */
 
-        Stage breakpointStage = new Stage();
-        breakpointStage.setTitle("Add New Breakpoint");
-
-        HBox hb = new HBox(8);
-        Scene breakpointScene = new Scene(hb, 350, 30);
-        breakpointStage.setScene(breakpointScene);
-
-        ObservableList<String> options =
-                FXCollections.observableArrayList(
-                  "Address",
-                        "Line Number",
-                        "Label"
-                );
-        final ComboBox<String> bpOptions = new ComboBox<>(options);
-        bpOptions.setValue("Address");
-        hb.getChildren().add(bpOptions);
-
-        TextField data = new TextField();
-        hb.getChildren().add(data);
-
-        Button addButton = new Button("Add");
-        addButton.setMaxWidth(100);
-        hb.getChildren().add(addButton);
-
-        addButton.setOnAction(actionEvent -> {
-            // add the breakpoint
-            boolean successful = this.addBreakpoint(bpOptions.getValue(), data.getCharacters().toString());
-
-            // if we were successful, close the stage; else, leave it open
-            if (successful)
-                breakpointStage.close();
-        });
-
-        breakpointStage.show();
+        String[] bpData = getAddress("Add Breakpoint");
+        if (bpData[0] != null)
+            addBreakpoint(bpData[0], bpData[1]);
     }
 
     private void deleteBreakpointDialog() {
@@ -692,7 +755,8 @@ public class GUI extends Application {
             if (asmFile != null) {
                 userConsole.appendText("Assembling...\n");
                 try {
-                    emu.assemble(asmFile.getAbsolutePath(), "assembled1.emu");
+                    String filenameNoExtension = FileExt.getFilenameWithoutExtension(asmFile);
+                    emu.assemble(asmFile.getAbsolutePath(), filenameNoExtension);
                     userConsole.appendText("Done; no errors.\n");
                 } catch (Exception e) {
                     userConsole.appendText("**** Assembly Error ****\n");
