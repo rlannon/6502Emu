@@ -362,27 +362,11 @@ public class GUI extends Application {
         };
     }
 
-    private void updateCPUMonitor() {
+    private void addInput() {
         /*
-        Updates the text in the CPU monitor
+        Add an input to the emulator
          */
 
-        registerMonitor.clear();
-        String binaryIntegers = String.format("%8s", Integer.toBinaryString(emu.debugger.getStatus())).replace(' ', '0');
-        binaryIntegers = binaryIntegers.replace("", " ").substring(1);
-        registerMonitor.appendText(
-                String.format("A: $%02x\nX: $%02x\nY: $%02x\nSP: $%02x\n\nPC: $%04x\n\nSTATUS:\n\tN V B - D I Z C\n\t%16s",
-                        emu.debugger.getA(),
-                        emu.debugger.getX(),
-                        emu.debugger.getY(),
-                        emu.debugger.getStackPointer(),
-                        emu.debugger.getPC(),
-                        binaryIntegers
-                )
-        );
-    }
-
-    private void addInput() {
         Stage inputStage = new Stage();
         inputStage.setTitle("Add emulated hardware");
 
@@ -639,15 +623,39 @@ public class GUI extends Application {
 
     /*
 
-    Constructor and setup methods
+    Constructor, setup methods
 
      */
+
+    // Basic screen updates
 
     private void clearScreen() {
         // Clears the output screen by filling it with all black
         screenContext.setFill(Color.BLACK);
         screenContext.fillRect(0, 0, screenWidth * pxWidth, screenWidth * pxHeight);
     }
+
+    private void updateCPUMonitor() {
+        /*
+        Updates the text in the CPU monitor
+         */
+
+        registerMonitor.clear();
+        String binaryIntegers = String.format("%8s", Integer.toBinaryString(emu.debugger.getStatus())).replace(' ', '0');
+        binaryIntegers = binaryIntegers.replace("", " ").substring(1);
+        registerMonitor.appendText(
+                String.format("A: $%02x\nX: $%02x\nY: $%02x\nSP: $%02x\n\nPC: $%04x\n\nSTATUS:\n\tN V B - D I Z C\n\t%16s",
+                        emu.debugger.getA(),
+                        emu.debugger.getX(),
+                        emu.debugger.getY(),
+                        emu.debugger.getStackPointer(),
+                        emu.debugger.getPC(),
+                        binaryIntegers
+                )
+        );
+    }
+
+    // Menubar setup
 
     private MenuBar createMenu(Stage stage) {
         /*

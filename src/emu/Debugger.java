@@ -52,7 +52,10 @@ public class Debugger {
     }
 
     public void removeBreakpoint(int address) {
-        // Remove the breakpoint at an address. If none exists, do nothing
+        /*
+        Remove the breakpoint at a given address
+        @param  address The address of the breakpoint
+         */
         this.breakpoints.remove(address);
     }
 
