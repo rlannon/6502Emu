@@ -1528,10 +1528,6 @@ public class CPU {
 
          */
 
-        // get the proper address from vector | (vector + 1) << 8
-        vector &= 0xFFFF;
-        int address = ((this.memory[vector + 1] << 8) & 0xFF00) | (this.memory[vector] & 0xFF);
-
         // push high byte, low byte of the program counter
         this.pushToStack((byte)((this.pc >> 8) & 0xFF));
         this.pushToStack((byte)(this.pc & 0xFF));
@@ -1539,8 +1535,12 @@ public class CPU {
         // push status
         this.pushToStack(this.status);
 
-        // transfer control
-        this.pc = address;
+        // disable interrupts _after_ we push processor status
+        this.setFlag(Status.INTERRUPT_DISABLE);
+
+        // get the proper address from vector | (vector + 1) << 8; transfer control
+        vector &= 0xFFFF;
+        this.pc = ((this.memory[vector + 1] << 8) & 0xFF00) | (this.memory[vector] & 0xFF);
     }
 
     void signal(Signal signal) {

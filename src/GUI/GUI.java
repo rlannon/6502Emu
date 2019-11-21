@@ -5,6 +5,8 @@ import emu.DrawGraphics;
 import emu.Emulator;
 
 // JDK packages
+
+// JavaFX
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.beans.property.BooleanProperty;
@@ -18,12 +20,6 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -33,10 +29,9 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.util.Pair;
 
+// Other JDK packages
 import java.io.File;
-import java.util.List;
 
 public class GUI extends Application {
     /*
@@ -66,88 +61,35 @@ public class GUI extends Application {
     private TextArea registerMonitor;
     private TextArea userConsole;
 
-    /*
-
-    Methods
-
-     */
 
     /*
 
-    Functionality
+    Functionality / utility methods
 
      */
 
-    private void deleteBreakpoints(ObservableList<Integer> toDelete) {
-        // delete breakpoints from our list
-
-        // only delete items if we have more than none selected
-        if (toDelete.size() > 0) {
-            for (Integer bp: toDelete) {
-                emu.debugger.removeBreakpoint(bp);
-            }
-        } else {
-            // display an error alert if we have none selected
-            Alert selectedBreakpointsAlert = new Alert(Alert.AlertType.ERROR);
-            selectedBreakpointsAlert.setTitle("Invalid selection");
-            selectedBreakpointsAlert.setHeaderText("No breakpoints selected");
-            selectedBreakpointsAlert.setContentText("You must select breakpoints to delete them");
-            selectedBreakpointsAlert.show();
-        }
-    }
-
-    private void addBreakpoint(String what, String where) {
+    private void errorAlert(String header, String content) {
         /*
-         Adds a breakpoint to the emulator's debugger
-         Returns whether the breakpoint was added successfully
-
-         @param what    Whether the breakpoint is a label, address, or line number
-         @param where   The data in the textfield (actual label name, address, or line number)
-         @param stage   The stage onto which we should place the alert dialog
-         @return    boolean
+        Displays an error message using an alert dialog
+        @param  header  The header text
+        @param  content The content text
          */
 
-        Alert failureAlert = new Alert(Alert.AlertType.ERROR);
-        failureAlert.setTitle("Error");
+        Alert err = new Alert(Alert.AlertType.ERROR);
+        err.setTitle("Error");
+        err.setHeaderText(header);
+        err.setContentText(content);
 
-        if (what.equals("Address")) {
-            try {
-                int address = Integer.parseInt(where, 16);
-                if (address >= 0 && address < 65536) {
-                    emu.debugger.setBreakpoint(address);    // todo: use a predicate function here to allow more modularization
-                } else {
-                    throw new Exception("Address out of range");
-                }
-            } catch (NumberFormatException n) {
-                failureAlert.setHeaderText("Invalid address");
-                failureAlert.setContentText("You must enter a valid hexadecimal number");
-                failureAlert.show();
-            } catch (Exception e) {
-                failureAlert.setHeaderText("Invalid address");
-                failureAlert.setContentText(e.getMessage());
-                failureAlert.show();
-            }
-        } else if (what.equals("Label")) {
-            try {
-                emu.debugger.setBreakpoint(emu.debugger.getAddressFromLabel(where));
-            } catch (Exception e){
-                failureAlert.setHeaderText("Label not found");
-                failureAlert.setContentText("Label does not exist in the debugger's symbol table");
-                failureAlert.show();
-            }
-        } else {
-            try {
-                int lineNumber = Integer.parseInt(where);
-                emu.debugger.setBreakpoint(emu.debugger.getAddressFromLineNumber(lineNumber));
-            } catch (Exception e) {
-                failureAlert.setHeaderText("Invalid line number");
-                failureAlert.setContentText(e.getMessage());
-                failureAlert.show();
-            }
-        }
+        err.show();
     }
 
-    private String[] getAddress(String title) {
+    private String[] getAddressDataDialog(String title) {
+        /*
+        Displays a dialog to get address data from the user
+        @param  title   The title for the dialog
+        @return String[]    Always has 2 elements; contains the "what" (address, label, or line) and the "where" (the actual data)
+         */
+
         Stage addressStage = new Stage();
         addressStage.setTitle(title);
 
@@ -184,48 +126,83 @@ public class GUI extends Application {
         return toReturn;
     }
 
-    private void jump(String type, String data) {
-        Alert failureAlert = new Alert(Alert.AlertType.ERROR);
+    private int getAddress(String what, String where) throws Exception {
+        /*
+        Resolves the address entered by the user
+        @param  what    Whether we want to get an address, line number, or label
+        @param  where   The actual address, line number, or label name -- what we wish to resolve
+        @return int The address we found, assuming we could find one
+         */
 
-        if (type.equals("Address")) {
-            try {
-                int address = Integer.parseInt(data, 16);
-                if (address >= 0 && address < 65536) {
-                    emu.debugger.jump(address);
-                } else {
-                    throw new Exception("Address out of range");
-                }
-            } catch (NumberFormatException n) {
-                failureAlert.setHeaderText("Invalid address");
-                failureAlert.setContentText("You must enter a valid hexadecimal number");
-                failureAlert.show();
-            } catch (Exception e) {
-                failureAlert.setHeaderText("Invalid address");
-                failureAlert.setContentText(e.getMessage());
-                failureAlert.show();
+        if (what.equals("Address")) {
+            int address = Integer.parseInt(where, 16);
+            if (address >= 0 && address < 65536) {
+                return address;
+            } else {
+                throw new Exception("Address out of range");
             }
-        } else if (type.equals("Label")) {
-            try {
-                emu.debugger.jump(emu.debugger.getAddressFromLabel(type));
-            } catch (Exception e){
-                failureAlert.setHeaderText("Label not found");
-                failureAlert.setContentText("Label does not exist in the debugger's symbol table");
-                failureAlert.show();
+        } else if (what.equals("Label")) {
+            return emu.debugger.getAddressFromLabel(where);
+        } else {
+            int lineNumber = Integer.parseInt(where);
+            return emu.debugger.getAddressFromLineNumber(lineNumber);
+        }
+    }
+
+    private void deleteBreakpoints(ObservableList<Integer> toDelete) {
+        /*
+        Delete previously set breakpoints
+        @param  toDelete    A list of the selected breakpoints we wish to delete
+         */
+
+        // only delete items if we have more than none selected
+        if (toDelete.size() > 0) {
+            for (Integer bp: toDelete) {
+                emu.debugger.removeBreakpoint(bp);
             }
         } else {
-            try {
-                int lineNumber = Integer.parseInt(data);
-                emu.debugger.jump(emu.debugger.getAddressFromLineNumber(lineNumber));
-            } catch (Exception e) {
-                failureAlert.setHeaderText("Invalid line number");
-                failureAlert.setContentText(e.getMessage());
-                failureAlert.show();
-            }
+            // display an error alert if we have none selected
+            errorAlert("No breakpoints selected", "You must select breakpoints to delete them");
+        }
+    }
+
+    private void addBreakpoint(String what, String where) {
+        /*
+         Adds a breakpoint to the emulator's debugger
+         Returns whether the breakpoint was added successfully
+
+         @param what    Whether the breakpoint is a label, address, or line number
+         @param where   The data in the textfield (actual label name, address, or line number)
+         */
+
+        try {
+            emu.debugger.setBreakpoint(getAddress(what, where));
+        } catch (Exception e) {
+            errorAlert("Could not add breakpoint", e.getMessage());
+        }
+    }
+
+    private void jump(String type, String data) {
+        /*
+        Jump to location in memory. This may be an address, label, or line number
+        @param  type    The type of data; can be address, line, or label
+        @param  data    The data entered; this will be the actual label, address, or line number
+         */
+
+        try {
+            emu.debugger.jump(getAddress(type,data));
+        } catch (Exception e) {
+            errorAlert("Could not set PC", e.getMessage());
         }
     }
 
     private void resume() {
         // Resume CPU execution after a pause
+
+        // put a message in the user console saying we are resuming execution
+        userConsole.appendText("Running...\n");
+
+        // resume execution
         emu.debugger.resume();
         lastNMI = System.nanoTime();
         timer.start();
@@ -270,7 +247,7 @@ public class GUI extends Application {
         registerMonitor.setMinHeight(200);
         registerMonitor.setEditable(false); // the user cannot modify the text content here, only the program can
         registerMonitor.setFont(Font.font("Courier New", FontWeight.NORMAL, 12));
-        registerMonitor.appendText("A: $00\nX: $00\nY: $00\nSP: $FF\n\nPC: $0000\n\nSTATUS:\n\tN V B - D I Z C\n\t0 0 1 1 0 0 0 0");
+        updateCPUMonitor();
 
         // create a label for the monitor
         Label regMonitorLabel = new Label("CPU Status");
@@ -386,14 +363,22 @@ public class GUI extends Application {
     }
 
     private void updateCPUMonitor() {
+        /*
+        Updates the text in the CPU monitor
+         */
+
         registerMonitor.clear();
+        String binaryIntegers = String.format("%8s", Integer.toBinaryString(emu.debugger.getStatus())).replace(' ', '0');
+        binaryIntegers = binaryIntegers.replace("", " ").substring(1);
         registerMonitor.appendText(
-                String.format("A: $%02x\nX: $%02x\nY: $%02x\nSP: $%02x\n\nPC: $%04x\n\nSTATUS:\n\tN V B - D I Z C\n\t0 0 1 1 0 0 0 0",
+                String.format("A: $%02x\nX: $%02x\nY: $%02x\nSP: $%02x\n\nPC: $%04x\n\nSTATUS:\n\tN V B - D I Z C\n\t%16s",
                         emu.debugger.getA(),
                         emu.debugger.getX(),
                         emu.debugger.getY(),
                         emu.debugger.getStackPointer(),
-                        emu.debugger.getPC())
+                        emu.debugger.getPC(),
+                        binaryIntegers
+                )
         );
     }
 
@@ -550,16 +535,12 @@ public class GUI extends Application {
         Button jumpButton = new Button("Set PC...");
         grid.add(jumpButton, 5, 3, 2, 1);
         jumpButton.setOnAction(actionEvent -> {
-            String[] values = getAddress("Select Address");
+            String[] values = getAddressDataDialog("Select Address");
             try {
-                if (values[0] != null)
+                if (values[1] != null)
                     jump(values[0], values[1]); // todo: if alert is displayed, keep dialog open?
             } catch (Exception e) {
-                Alert debuggerAlert = new Alert(Alert.AlertType.ERROR);
-                debuggerAlert.setTitle("Error");
-                debuggerAlert.setHeaderText("Could not set PC");
-                debuggerAlert.setContentText(e.getMessage());
-                debuggerAlert.show();
+                errorAlert("Could not set PC", "You must enter a valid value");
             }
         });
 
@@ -595,7 +576,7 @@ public class GUI extends Application {
         This calls the function 'addBreakpoint' to actually add the data
          */
 
-        String[] bpData = getAddress("Add Breakpoint");
+        String[] bpData = getAddressDataDialog("Add Breakpoint");
         if (bpData[0] != null)
             addBreakpoint(bpData[0], bpData[1]);
     }
@@ -678,13 +659,26 @@ public class GUI extends Application {
 
         final MenuBar menu = new MenuBar();
 
+        final Menu fileMenu = fileMenu(stage);
+        final Menu toolsMenu = toolsMenu(stage);
+        final Menu runMenu = runMenu(stage);
+        final Menu debugMenu = debugMenu(stage);
+
+        // Create the MenuBar
+        menu.getMenus().addAll(fileMenu, toolsMenu, runMenu, debugMenu);
+
+        // return the MenuBar
+        return menu;
+    }
+
+    private Menu fileMenu(Stage stage) {
         /*
 
-        FILE MENU
+        File Menu
 
          */
 
-        final Menu fileMenu = new Menu("File");
+        Menu fileMenu = new Menu("File");
         // create some menu options
         MenuItem openOption = new MenuItem("Open emu file...");
         // separator
@@ -709,11 +703,7 @@ public class GUI extends Application {
                     emu.debugger.pause();
                     userConsole.appendText("Successfully opened file.\n");
                 } catch (Exception e) {
-                    Alert fileAlert = new Alert(Alert.AlertType.ERROR);
-                    fileAlert.setTitle("File Error");
-                    fileAlert.setHeaderText("Could not load file");
-                    fileAlert.setContentText(e.getMessage());
-                    fileAlert.show();
+                    errorAlert("Could not load file", e.getMessage());
                 }
             } else {
                 System.out.println("File was null...");
@@ -727,11 +717,16 @@ public class GUI extends Application {
 
         exitOption.setOnAction(actionEvent -> System.exit(0));
 
+        return fileMenu;
+    }
+
+    private Menu toolsMenu(Stage stage) {
         /*
 
-        TOOLS MENU
+        Tools Menu
 
          */
+
         final Menu toolsMenu = new Menu("Tools");
         // create some menu options
         // todo: allow text editor in this program?
@@ -780,11 +775,16 @@ public class GUI extends Application {
         // set our 'genCoreDumpProperty' to be equal to our
         genCoreDumpProperty = coreDump.selectedProperty();
 
+        return toolsMenu;
+    }
+
+    private Menu runMenu(Stage stage) {
         /*
 
-        RUN MENU
+        Run Menu
 
          */
+
         final Menu runMenu = new Menu("Run");
         MenuItem runOption = new MenuItem("Run...");
         MenuItem stopOption = new MenuItem("Terminate");
@@ -794,13 +794,8 @@ public class GUI extends Application {
 
         runOption.setOnAction(actionEvent -> {
             // Run program
-            userConsole.appendText("Running...\n");
             if (genCoreDumpProperty.get()) {
-                Alert coreDumpAlert = new Alert(Alert.AlertType.WARNING);
-                coreDumpAlert.setTitle("Runtime error");
-                coreDumpAlert.setHeaderText("Cannot generate core dump");
-                coreDumpAlert.setContentText("You must run a program in debug mode to generate a core dump");
-                coreDumpAlert.show();
+                errorAlert("Cannot generate core dump", "You must be in debug mode to generate core dumps");
             }
             emu.setDebugMode(false);
             emu.reset();
@@ -831,11 +826,16 @@ public class GUI extends Application {
             userConsole.appendText("Reset.\n");
         });
 
+        return runMenu;
+    }
+
+    private Menu debugMenu(Stage stage) {
         /*
 
         Debug Menu
 
          */
+
         final Menu debugMenu = new Menu("Debug");
         MenuItem debugOption = new MenuItem("Debug...");
         MenuItem debuggerPanelOption = new MenuItem("Open Debugger Panel");
@@ -875,11 +875,7 @@ public class GUI extends Application {
             emu.setDebugMode(enableDebugMode.selectedProperty().get());
         });
 
-        // Create the MenuBar
-        menu.getMenus().addAll(fileMenu, toolsMenu, runMenu, debugMenu);
-
-        // return the MenuBar
-        return menu;
+        return debugMenu;
     }
 
     public GUI() {
