@@ -7,6 +7,7 @@ import emu.Emulator;
 // JDK packages
 
 // JavaFX
+import emu.Input;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.beans.property.BooleanProperty;
@@ -20,6 +21,8 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -222,6 +225,15 @@ public class GUI extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        /*
+
+        The main function for the program; runs the GUI and handles all user input, etc.
+
+         */
+
+        // todo: use init/setup functions?
+        // todo: allow .emu files to be opened and run directly by passing them to the program as arguments
+
         primaryStage.setTitle("6502 SDK");
 
         // add the menubar to the page
@@ -239,7 +251,6 @@ public class GUI extends Application {
         outer.getChildren().add(hbox);
         hbox.getChildren().addAll(leftCol, rightCol);
         Scene primaryScene = new Scene(outer, 700, 600);
-        primaryStage.setScene(primaryScene);
 
         // add the register and status monitor
         registerMonitor = new TextArea();
@@ -266,6 +277,21 @@ public class GUI extends Application {
         leftCol.getChildren().add(consoleLabel);
         leftCol.getChildren().add(userConsole);
 
+        // Override the key traversal policy so it doesn't switch focus when they are pressed
+        primaryScene.setOnKeyPressed(keyEvent -> {
+            switch (keyEvent.getCode()) {
+                case UP:
+                case DOWN:
+                case LEFT:
+                case RIGHT:
+                case ENTER:
+                    keyEvent.consume();
+                    break;
+                default:
+                    break;
+            }
+        });
+
         /*
 
         Right Column
@@ -283,16 +309,37 @@ public class GUI extends Application {
         rightCol.getChildren().add(regMonitorLabel);
         rightCol.getChildren().add(registerMonitor);
 
+        // When the user clicks on the screen, focus on it
+        this.screen.setOnMouseClicked(mouseEvent -> {
+            this.screen.requestFocus();
+        });
+
+        // If the user presses a key when the screen is in focus, interpret it as an emulated input
+        this.screen.setOnKeyPressed(keyEvent -> {
+            // Get the text of the key
+            String key = (keyEvent.getCharacter().equals(KeyEvent.CHAR_UNDEFINED)) ? keyEvent.getCode().toString() : keyEvent.getText();
+            System.out.println("Key pressed: " + key);
+
+            // See if we have registered inputs
+            if (emu.hasInput(key)) {
+                System.out.println("Input registered for key");
+                Input registeredInput = emu.getInput(key);
+                System.out.println("Registered: \n\tTriggers IRQ: " + registeredInput.isTriggersIRQ() + "\n\tMemory: " +
+                        String.format("$%04x", registeredInput.getAddress()));
+            } else {
+                System.out.println("Ignoring; no input registered for key");
+            }
+        });
+
+        // todo: allow user input
         // finally, show the stage
+
+        primaryStage.setScene(primaryScene);
         primaryStage.show();
 
         // we will use an animation timer to control CPU speed
         timer = new AnimationTimer() {
-            /*
-
-            The animation timer that actually runs the emulator program
-
-             */
+            // The animation timer that is responsible for stepping the CPU, updating graphics, etc.
 
             @Override
             public void handle(long now) {
@@ -362,10 +409,12 @@ public class GUI extends Application {
         };
     }
 
-    private void addInput() {
+    private void addInput(TableView<Input> inputs) {
         /*
         Add an input to the emulator
          */
+
+        // todo: refactor to use keylisteners to get keys
 
         Stage inputStage = new Stage();
         inputStage.setTitle("Add emulated hardware");
@@ -408,7 +457,20 @@ public class GUI extends Application {
                 System.out.println("key binding: " + mappedKey.getCharacters());    // todo: change to dropdown with 'keyboard' or 'mouse'
                 System.out.println("trigger IRQ: " + triggerIRQ.isSelected());
 
-                // todo: add input to emulator
+                try {
+                    if (mappedKey.getCharacters().length() == 1) {
+                        emu.addInput(mappedKey.getCharacters().toString().toUpperCase(),
+                                getAddress("Address", addressField.getCharacters().toString()),
+                                triggerIRQ.isSelected());
+                    } else {
+                        throw new Exception("Key must be a single character");
+                    }
+                } catch (Exception e) {
+                    errorAlert("Cannot add input", e.getMessage());
+                }
+
+                refreshInputs(inputs);
+                inputStage.close();
             }
         });
 
@@ -621,6 +683,49 @@ public class GUI extends Application {
         breakpointStage.show();
     }
 
+    private void configureInputsDialog() {
+        /*
+        Displays the menu for managing our inputs
+         */
+        Stage configInputsStage = new Stage();
+        configInputsStage.setTitle("Configure emulated inputs");
+
+        HBox hbox = new HBox(8);
+        VBox leftCol = new VBox(8);
+        VBox rightCol = new VBox(8);
+        hbox.getChildren().addAll(leftCol, rightCol);
+
+        // create a table to list our inputs
+        TableView<Input> inputs = new TableView<>();
+        leftCol.getChildren().add(inputs);
+
+        // create columns for the table
+        TableColumn<Input, String> keyBindingCol = new TableColumn<>("Key");
+        keyBindingCol.setCellValueFactory(new PropertyValueFactory<>("mappedKeyCode"));
+
+        TableColumn<Input, String> addressCol = new TableColumn<>("Address");
+        addressCol.setCellValueFactory(new PropertyValueFactory<>("address"));
+
+        TableColumn<Input, Boolean> irqCol = new TableColumn<>("Triggers IRQ?");
+        irqCol.setCellValueFactory(new PropertyValueFactory<>("triggersIRQ"));
+
+        // set our column headers
+        inputs.getColumns().add(keyBindingCol);
+        inputs.getColumns().add(addressCol);
+        inputs.getColumns().add(irqCol);
+        refreshInputs(inputs);
+
+        // Create a button to allow us to add inputs
+        Button addInputBtn = new Button("Add Input");
+        addInputBtn.setOnAction(actionEvent -> addInput(inputs));
+        leftCol.getChildren().add(addInputBtn);
+
+        // display the dialog
+        Scene inputScene = new Scene(hbox);
+        configInputsStage.setScene(inputScene);
+        configInputsStage.show();
+    }
+
     /*
 
     Constructor, setup methods
@@ -653,6 +758,14 @@ public class GUI extends Application {
                         binaryIntegers
                 )
         );
+    }
+
+    private void refreshInputs(TableView<Input> inputs) {
+        // now, add our items
+        inputs.getItems().clear();
+        for (Input i: emu.getAllInputs().values()) {
+            inputs.getItems().add(i);
+        }
     }
 
     // Menubar setup
@@ -742,9 +855,11 @@ public class GUI extends Application {
         MenuItem disassembleOption = new MenuItem("Disassemble...");
         MenuItem hexdumpOption = new MenuItem("Hexdump");
         CheckMenuItem coreDump = new CheckMenuItem("Generate core dump");   // todo: generate property getter and setter for this
+        MenuItem configureInput = new MenuItem("Configure Inputs");
 
         // add our menu items to the 'tools' menu
-        toolsMenu.getItems().addAll(asmOption, disassembleOption, hexdumpOption, new SeparatorMenuItem(), coreDump);
+        toolsMenu.getItems().addAll(asmOption, disassembleOption, hexdumpOption, new SeparatorMenuItem(), coreDump,
+                new SeparatorMenuItem(), configureInput);
 
         // set our actions for each option
         asmOption.setOnAction(actionEvent -> {
@@ -778,6 +893,10 @@ public class GUI extends Application {
         hexdumpOption.setOnAction(actionEvent -> {
             // todo: hexdump
             System.out.println("Hexdump not yet implemented");
+        });
+
+        configureInput.setOnAction(actionEvent -> {
+            configureInputsDialog();
         });
 
         // set our 'genCoreDumpProperty' to be equal to our

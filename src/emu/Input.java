@@ -7,22 +7,26 @@ public class Input {
      */
 
     private boolean triggersIRQ;    // whether this input triggers an IRQ
-    private short address;  // the address to which that input is mapped
-    private int mappedKeyCode;  // the key code associated with the input
+    private int address;  // the address to which that input is mapped
+    private String mappedKeyCode;  // the key code associated with the input
 
-    short getAddress() {
-        return this.address;
+    public String getMappedKeyCode() {
+        return this.mappedKeyCode;
     }
 
-    boolean triggersIRQ() {
+    public int getAddress() {
+        return this.address & 0xFFFF;
+    }
+
+    public boolean isTriggersIRQ() {
         return this.triggersIRQ;
     }
 
-    Input(int mappedKeyCode, short address) {
-        this(mappedKeyCode, address, false);
+    Input(String key, short address) {
+        this(key, address, false);
     }
 
-    Input(int mappedKeyCode, short address, boolean triggersIRQ) {
+    Input(String mappedKeyCode, int address, boolean triggersIRQ) {
         this.mappedKeyCode = mappedKeyCode;
         this.address = address;
         this.triggersIRQ = triggersIRQ;

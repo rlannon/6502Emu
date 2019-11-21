@@ -3,9 +3,11 @@ package emu;
 import GUI.GUI;
 import assembler.Assembler;
 import emu_format.EmuFile;
+import javafx.collections.ObservableList;
+
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Vector;
+import java.util.*;
 
 public class Emulator {
     final int LATCH = 0x2000;   // the latch that tells us whether it's safe to copy memory
@@ -16,7 +18,7 @@ public class Emulator {
     private CPU cpu;    // the CPU we are running; automatically creates debugger
     public Debugger debugger;
     private Assembler assemble; // the Assembler we are using
-    private Vector<Input> inputs;   // user inputs; these are configurable
+    private HashMap<String, Input> inputs;   // user inputs; these are configurable
 
     private boolean debugMode;  // whether the emulator is running in debug mode
 
@@ -35,7 +37,7 @@ public class Emulator {
         this.cpu.debugger.setBreakpoint(address);
     }
 
-    public void addInput(int keyCode, short address, boolean triggersIRQ) {
+    public void addInput(String character, int address, boolean triggersIRQ) throws Exception {
         /*
 
         addInput
@@ -48,7 +50,23 @@ public class Emulator {
          */
 
         // todo: ensure multiple inputs aren't mapped to the same area of memory
-        this.inputs.add(new Input(keyCode, address, triggersIRQ));
+        if (this.inputs.containsKey(character)) {
+            throw new Exception("Input device already mapped");
+        } else {
+            this.inputs.put(character, new Input(character, address, triggersIRQ));
+        }
+    }
+
+    public boolean hasInput(String character) {
+        return this.inputs.containsKey(character);
+    }
+
+    public Input getInput(String character) {
+        return this.inputs.get(character);
+    }
+
+    public HashMap<String, Input> getAllInputs() {
+        return this.inputs;
     }
 
     public void step() throws Exception {
@@ -187,7 +205,7 @@ public class Emulator {
         this.reset();
 
         this.assemble = new Assembler();
-        this.inputs = new Vector<>();
+        this.inputs = new HashMap<>();
 
         this.gui = null;
     }
