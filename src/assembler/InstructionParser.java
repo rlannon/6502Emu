@@ -1,5 +1,7 @@
 package assembler;
 
+import javafx.util.Pair;
+
 class InstructionParser {
     // A class to parse instructions
 
@@ -88,7 +90,7 @@ class InstructionParser {
         return found;
     }
 
-    static byte getOpcode(String mnemonic, int addressingMode) throws Exception {
+    private static byte getOpcode(String mnemonic, int addressingMode) throws Exception {
         boolean found = false;
         int i = 0;
         mnemonic = mnemonic.toUpperCase();
@@ -112,6 +114,35 @@ class InstructionParser {
         else
         {
             throw new Exception("Could not find mnemonic specified");
+        }
+    }
+
+    static Pair<String, Integer> getMnemonic(byte opcode) throws Exception {
+        boolean found = false;
+        int i = 0, j = 0;
+        while (i < OPCODES.length && !found) {
+            byte[] addressingModes = OPCODES[i].getAddressingModes();
+            j = 0;
+            boolean foundAddrMode = false;
+            while (j < addressingModes.length && !foundAddrMode) {
+                if (addressingModes[j] == opcode) {
+                    foundAddrMode = true;
+                } else {
+                    j++;
+                }
+            }
+
+            if (foundAddrMode) {
+                found = true;
+            } else {
+                i++;
+            }
+        }
+
+        if (found) {
+            return new Pair<>(OPCODES[i].getMnemonic(), j);
+        } else {
+            throw new Exception("Illegal instruction");
         }
     }
 
@@ -214,6 +245,11 @@ class InstructionParser {
                     // things like 'asl a' use this
                     return AddressingMode.Single;
                 }
+                // if the first character is a #, then it's immediate
+                else if (data[1].charAt(0) == '#')
+                {
+                    return AddressingMode.Immediate;
+                }
                 else if (data[1].matches(ZERO_PATTERN))
                 {
                     if (data[1].charAt(data[1].length() - 1) == ',')
@@ -274,11 +310,6 @@ class InstructionParser {
                     else
                         throw new Exception("Invalid addressing mode syntax");
                 }
-                // if the first character is a #, then it's immediate
-                else if (data[1].charAt(0) == '#')
-                {
-                    return AddressingMode.Immediate;
-                }
                 else
                 {
                     throw new Exception("Invalid addressing mode");
@@ -308,7 +339,7 @@ class InstructionParser {
                 return new byte[]{opcode};
             } else {
                 // if we have a label, the value should be 0; otherwise, use parseNumber
-                value = (data[1].matches("\\.?[a-zA-Z_]+.+")) ? 0x00 : parseNumber(data[1]);
+                value = (data[1].matches("\\.?#?[a-zA-Z_]+.+")) ? 0x00 : parseNumber(data[1]);
 
                 // get instruction width based on addressing mode
                 if (addressingMode == AddressingMode.Immediate || addressingMode == AddressingMode.IndirectX ||

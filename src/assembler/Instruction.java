@@ -23,6 +23,10 @@ class Instruction {
         }
     }
 
+    byte[] getAddressingModes() {
+        return this.addressingModes;
+    }
+
     Instruction(String mnemonic, byte[] addressingModes) {
         this.mnemonic = mnemonic;
         this.addressingModes = addressingModes;

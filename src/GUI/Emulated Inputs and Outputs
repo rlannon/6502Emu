@@ -22,5 +22,22 @@ The screen is a 32 x 32 memory-mapped chromatic screen located beginning at addr
 All other values will be rendered as black.
 
 Inputs can be mapped to a specific keyboard character or to the keyboard as a whole. If the latter is chosen, any
-individual key bindings set will be ignored.
-Inputs may trigger an IRQ
+individual key bindings set will be ignored. When a key with a binding is pressed, its ASCII value will be written to the
+appropriate memory location. Note that all values will be assumed to be capitals. Values are obtained through the keyEvent
+getCode function, which will provide codes for keys such as the arrow keys and control keys as well.
+
+Key codes for action keys are:
+    TAB: $09
+    ENTER: $0A
+    LSHIFT, RSHIFT: $10
+    CONTROL: $11
+    ALT: $12
+    PAGE_UP: $21
+    PAGE_DOWN: $22
+    LEFT: $25
+    UP: $26
+    RIGHT: $27
+    DOWN: $28
+    ALT_GRAPH: $7E
+
+Inputs may trigger interrupts; if they are set up to do so, an IRQ signal will be sent to the CPU if the I flag is clear.

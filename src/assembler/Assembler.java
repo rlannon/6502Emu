@@ -12,13 +12,13 @@ public class Assembler {
     /*
 
     Implements a single-pass assembler for 6502 asm
-    This may be upgraded to a multi-pass later, but for now we will keep it simple
+    Although this is a single-pass assembler, forward-declared labels are allowed; this is due to the relocation table.
 
      */
 
     // our assembler directives
     private final static String[] ASM_DIRECTIVES = {
-            ".org", ".db", ".byte", ".dw", ".word", ".rsset", ".rs"
+            ".org", ".db", ".byte", ".dw", ".word", ".rsset", ".rs", ".macro"
     };
 
     // some patterns
@@ -36,6 +36,7 @@ public class Assembler {
     // place tracking
     private short currentOrigin;    // the current origin
     private short currentOffset;    // the current byte offset from the origin
+    private int lineNumber;
 
     // data address tracking
     private short rsAddress; // the internal counter for the .rs directive
@@ -91,7 +92,7 @@ public class Assembler {
             if (symName.charAt(0) == '.') {
                 // ensure the label has a parent and that
                 if (this.parentSymbolName == null || this.parentSymbolName.equals("")) {
-                    throw new Exception("Cannot create child symbol, as no parent symbol could be found");
+                    throw new AssemblerException("Cannot create child symbol, as no parent symbol could be found", this.lineNumber);
                 } else {
                     return this.parentSymbolName + symName;
                 }
@@ -102,7 +103,7 @@ public class Assembler {
         }
         else
         {
-            throw new Exception("String is empty");
+            throw new AssemblerException("String is empty", this.lineNumber);
         }
     }
 
@@ -126,13 +127,15 @@ public class Assembler {
 
     private String[] splitString(String toSplit) {
         // split the string according to TO_IGNORE, removing empty strings and nullptrs
-        return java.util.Arrays.stream(this.TO_IGNORE.split(toSplit))
+        return java.util.Arrays.stream(TO_IGNORE.split(toSplit))
                 .filter(value -> value != null && value.length() > 0)
                 .toArray(String[]::new);
     }
 
     private void resolveSymbols() throws Exception {
         // performs symbol resolution for all symbols in the relocation table
+
+        // todo: enable instruction length optimization for zero-page addressing
 
         for (RelocationSymbol rSym: this.relocationTable)
         {
@@ -163,17 +166,24 @@ public class Assembler {
                     } else if ((rSym.getAddressingMode() == AddressingMode.Absolute) || (rSym.getAddressingMode() == AddressingMode.AbsoluteX) || (rSym.getAddressingMode() == AddressingMode.AbsoluteY)) {
                         // absolute requires the whole address
                         littleEndianAddressData = new byte[]{(byte) (asmSym.getData() & 0xFF), (byte) ((asmSym.getData() >> 8) & 0xFF)};
+                    } else if (rSym.getAddressingMode() == AddressingMode.Immediate) {
+                        // Immediate addressing requires that the symbol value is only 1 byte
+                        if (asmSym.getLength() == 1) {
+                            littleEndianAddressData = new byte[]{(byte)(asmSym.getData())};
+                        } else {
+                            throw new AssemblerException("Invalid addressing mode for label reference", rSym.getLineNumber());
+                        }
                     } else {
-                        throw new Exception("Invalid addressing mode for label reference");
+                        throw new AssemblerException("Invalid addressing mode for label reference", rSym.getLineNumber());
                     }
 
                     // replace the byte at offset; if it is an instruction, then use offset + 1 to leave room for the instruction byte
                     relocBank.setData(rSym.getOffset() + (rSym.isDefinition() ? 0 : 1), littleEndianAddressData);
                 } else {
-                    throw new NullPointerException("Could not find referenced symbol");
+                    throw new AssemblerException("Could not find referenced symbol", rSym.getLineNumber());
                 }
             } else {
-                throw new NullPointerException("Could not find bank information in symbol resolution");
+                throw new AssemblerException("Could not find bank information in symbol resolution", rSym.getLineNumber());
             }
         }
     }
@@ -185,131 +195,135 @@ public class Assembler {
         this.asmIn = new FileReader(inputFilename);
 
         // assemble the file
-        int lineNumber = 1;
+        this.lineNumber = 1;
         System.out.println("Assembling file...");
         Scanner asmScan = new Scanner(this.asmIn);
 
         while (asmScan.hasNextLine())
         {
-            try {
-                // add the current line and its address to our debugSymbols vector
-                DebugSymbol debugSymbol = new DebugSymbol(lineNumber, (short) (this.currentOrigin + this.currentOffset));
+            // add the current line and its address to our debugSymbols vector
+            DebugSymbol debugSymbol = new DebugSymbol(lineNumber, (short) (this.currentOrigin + this.currentOffset));
 
-                // get the line
-                String line = asmScan.nextLine();
+            // get the line
+            String line = asmScan.nextLine();
 
-                // split the line into its components, ignoring comments and whitespace
-                String[] lineData = splitString(line);
+            // split the line into its components, ignoring comments and whitespace
+            String[] lineData = splitString(line);
 
-                // skip all empty lines and comments
-                if (line.length() > 0 && lineData.length > 0) {
-                    // check to see if we have an instruction
-                    if (InstructionParser.isMnemonic(lineData[0])) {
-                        // check to see if lineData[1] is a symbol name; if so, add it to the relocation table
-                        if (lineData.length > 1) {
-                            if (lineData[1].matches(SYMBOL_NAME_REGEX)) {
-                                String symName = lineData[1];
+            // skip all empty lines and comments
+            if (line.length() > 0 && lineData.length > 0) {
+                // check to see if we have an instruction
+                if (InstructionParser.isMnemonic(lineData[0])) {
+                    // check to see if lineData[1] is a symbol name; if so, add it to the relocation table
+                    if (lineData.length > 1) {
+                        if (lineData[1].matches(SYMBOL_NAME_REGEX)) {
+                            String symName = lineData[1];
 
-                                // if we have the address-of-symbol operator (#), skip it
-                                if (symName.charAt(0) == '#') {
-                                    symName = symName.substring(1);
-                                }
-
-                                // if we have a comma at the end (indexed value), skip it
-                                if (symName.charAt(symName.length() - 1) == ',') {
-                                    symName = symName.substring(0, symName.length() - 1);
-                                }
-
-                                // if we have a ., get the parent label
-                                if (symName.charAt(0) == '.') {
-                                    symName = getFullSymbolName(symName);
-                                }
-
-                                this.relocationTable.add(new RelocationSymbol(symName, this.currentOrigin, this.currentOffset, InstructionParser.getAddressingMode(lineData)));
+                            // if we have the address-of-symbol operator (#), skip it
+                            if (symName.charAt(0) == '#') {
+                                symName = symName.substring(1);
                             }
-                        }
 
-                        // get our instruction data, update the offset, and add the bytes to our bytecode buffer
-                        byte[] instructionData = InstructionParser.parseInstruction(lineData);
-                        this.copyToBuffer(instructionData);
+                            // if we have a comma at the end (indexed value), skip it
+                            if (symName.charAt(symName.length() - 1) == ',') {
+                                symName = symName.substring(0, symName.length() - 1);
+                            }
 
-                        // update the offset
-                        this.currentOffset += instructionData.length;   // increase our offset
-                    }
-                    // check to see if we have an assembler directive
-                    else if (isDirective(lineData[0])) {
-                        // get the directive as a string to make the code easier to read
-                        String directive = lineData[0].toLowerCase();
+                            // if we have a ., get the parent label
+                            if (symName.charAt(0) == '.') {
+                                symName = getFullSymbolName(symName);
+                            }
 
-                        // .org directive
-                        switch (directive) {
-                            case ".org":
-                                this.handleOrg(lineData);
-                                break;
-                            case ".db":
-                            case ".byte":
-                                this.defineByte(lineData);
-                                break;
-                            case ".dw":
-                            case ".word":
-                                this.defineWords(lineData);
-                                break;
-                            case ".rsset":
-                                this.handleRSSet(lineData);
-                                break;
-                            case ".rs":
-                                this.reserveBytes(lineData);
-                                break;
-                            default:
-                                throw new Exception("Invalid assembler directive");
+                            this.relocationTable.add(new RelocationSymbol(
+                                    symName,
+                                    this.currentOrigin,
+                                    this.currentOffset,
+                                    InstructionParser.getAddressingMode(lineData),
+                                    lineNumber
+                            ));
                         }
                     }
-                    // otherwise, it is a symbol name
-                    else {
-                        // the symbol must be followed immediately by a colon or an equals sign
-                        if (lineData.length == 1) {
-                            if (lineData[0].charAt(lineData[0].length() - 1) == ':') {
-                                lineData[0] = lineData[0].substring(0, lineData[0].length() - 1);
-                            } else {
-                                throw new Exception("Invalid syntax");
-                            }
-                        } else {
-                            if (!lineData[1].equals("=")) {
-                                throw new Exception("Invalid syntax");
-                            } else {
-                                if (lineData.length > 3) {
-                                    throw new Exception("Invalid syntax");
-                                }
-                            }
-                        }
 
-                        // create a symbol with the current offset
-                        String fullSymName = this.getFullSymbolName(lineData[0]);
+                    // get our instruction data, update the offset, and add the bytes to our bytecode buffer
+                    byte[] instructionData = InstructionParser.parseInstruction(lineData);
+                    this.copyToBuffer(instructionData);
 
-                        // check to see if the symbol is already in our table
-                        if (this.symbolTable.contains(fullSymName)) {
-                            throw new Exception("Symbol already in table");
-                        } else {
-                            // add it to the symbol table
-                            AssemblerSymbol sym = new AssemblerSymbol(fullSymName, (short) (this.currentOrigin + this.currentOffset));
-                            this.symbolTable.put(fullSymName, sym);
+                    // update the offset
+                    this.currentOffset += instructionData.length;   // increase our offset
+                }
+                // check to see if we have an assembler directive
+                else if (isDirective(lineData[0])) {
+                    // get the directive as a string to make the code easier to read
+                    String directive = lineData[0].toLowerCase();
 
-                            // update our debug symbol
-                            debugSymbol.setLabel(fullSymName);
-                        }
+                    // .org directive
+                    switch (directive) {
+                        case ".org":
+                            this.handleOrg(lineData);
+                            break;
+                        case ".db":
+                        case ".byte":
+                            this.defineByte(lineData);
+                            break;
+                        case ".dw":
+                        case ".word":
+                            this.defineWords(lineData);
+                            break;
+                        case ".rsset":
+                            this.handleRSSet(lineData);
+                            break;
+                        case ".rs":
+                            this.reserveBytes(lineData);
+                            break;
+                        case ".macro":
+                            this.createMacro(lineData);
+                            break;
+                        default:
+                            throw new AssemblerException("Invalid assembler directive", this.lineNumber);
                     }
                 }
-                // skip empty lines, commented lines
+                // otherwise, it is a symbol name
+                else {
+                    // the symbol must be followed immediately by a colon or an equals sign
+                    if (lineData.length == 1) {
+                        if (lineData[0].charAt(lineData[0].length() - 1) == ':') {
+                            lineData[0] = lineData[0].substring(0, lineData[0].length() - 1);
+                        } else {
+                            throw new AssemblerException("Invalid syntax", this.lineNumber);
+                        }
+                    } else {
+                        if (!lineData[1].equals("=")) {
+                            throw new AssemblerException("Invalid syntax", this.lineNumber);
+                        } else {
+                            if (lineData.length > 3) {
+                                throw new AssemblerException("Invalid syntax", this.lineNumber);
+                            }
+                        }
+                    }
 
-                // add our debug symbol
-                this.debugSymbols.add(debugSymbol);
+                    // create a symbol with the current offset
+                    String fullSymName = this.getFullSymbolName(lineData[0]);
 
-                // increment our line number
-                lineNumber++;
-            } catch (Exception e) {
-                // if an exception occurred during assembly, catch it, add the line number, and throw a new one
-                throw new Exception("Error on line " + lineNumber + ": " + e.getMessage());
+                    // check to see if the symbol is already in our table
+                    if (this.symbolTable.contains(fullSymName)) {
+                        throw new AssemblerException("Symbol already in table", this.lineNumber);
+                    } else {
+                        // add it to the symbol table
+                        AssemblerSymbol sym = new AssemblerSymbol(fullSymName, (short) (this.currentOrigin + this.currentOffset));
+                        this.symbolTable.put(fullSymName, sym);
+
+                        // update our debug symbol
+                        debugSymbol.setLabel(fullSymName);
+                    }
+                }
             }
+            // skip empty lines, commented lines
+
+            // add our debug symbol
+            this.debugSymbols.add(debugSymbol);
+
+            // increment our line number
+            lineNumber++;
         }
 
         // once we are done, create a new bank if we had data
@@ -351,7 +365,12 @@ public class Assembler {
         }
 
         // get the new origin and update currentOrigin and currentOffset
-        this.currentOrigin = InstructionParser.parseNumber(lineData[1]);
+        try {
+            this.currentOrigin = InstructionParser.parseNumber(lineData[1]);
+        } catch (Exception e) {
+            throw new AssemblerException(e.getMessage(), this.lineNumber);
+        }
+
         this.currentOffset = 0;
 
         // we should also update the parent symbol because we are in a new segment
@@ -362,9 +381,13 @@ public class Assembler {
         // Handles the .rsset directive
 
         if (lineData[1].charAt(0) == '#') {
-            throw new Exception("Invalid directive syntax");
+            throw new AssemblerException("Invalid directive syntax", this.lineNumber);
         } else {
-            this.rsAddress = InstructionParser.parseNumber(lineData[1]);
+            try {
+                this.rsAddress = InstructionParser.parseNumber(lineData[1]);
+            } catch (Exception e) {
+                throw new AssemblerException(e.getMessage(), this.lineNumber);
+            }
         }
     }
 
@@ -378,24 +401,30 @@ public class Assembler {
          */
 
         if (lineData.length > 2) {
-            int numBytes = Integer.parseInt(lineData[1]);
-            if (numBytes > 0) {
-                String name = lineData[2];
+            try {
+                int numBytes = Integer.parseInt(lineData[1]);
 
-                // ensure our name follows the appropriate guidelines (and doesn't start with a #)
-                if (name.matches(SYMBOL_NAME_REGEX) && (name.charAt(0) != '#')) {
-                    // add the symbol
-                    name = this.getFullSymbolName(name);
-                    this.symbolTable.put(name, new AssemblerSymbol(name, this.rsAddress));
-                    this.rsAddress += numBytes;  // advance rsAddress by the number of bytes in the symbol
+                if (numBytes > 0) {
+                    String name = lineData[2];
+
+                    // todo: optimize for zero-page use (addresses between $00 and $FF will only need 2 bytes for the instruction, not 3)
+                    // ensure our name follows the appropriate guidelines (and doesn't start with a #)
+                    if (name.matches(SYMBOL_NAME_REGEX) && (name.charAt(0) != '#')) {
+                        // add the symbol
+                        name = this.getFullSymbolName(name);
+                        this.symbolTable.put(name, new AssemblerSymbol(name, this.rsAddress));
+                        this.rsAddress += numBytes;  // advance rsAddress by the number of bytes in the symbol
+                    } else {
+                        throw new AssemblerException("Invalid symbol name", this.lineNumber);
+                    }
                 } else {
-                    throw new Exception("Invalid symbol name");
+                    throw new AssemblerException("Bytes to reserve must be a positive integer", lineNumber);
                 }
-            }  else {
-                throw new Exception("Bytes to reserve must be a positive integer");
+            } catch (Exception e) {
+                throw new AssemblerException(e.getMessage(), this.lineNumber);
             }
         } else {
-            throw new Exception("Invalid directive syntax");
+            throw new AssemblerException("Invalid directive syntax", this.lineNumber);
         }
     }
 
@@ -413,7 +442,7 @@ public class Assembler {
         // the number of bytes will be equal to the length of the data - the directive
         int numBytes = lineData.length - 1;
         if (numBytes == 0) {
-            throw new Exception("Must define bytes");
+            throw new AssemblerException("Must define bytes", lineNumber);
         } else {
             // create an array to store the defined bytes
             byte[] definedBytes = new byte[numBytes];
@@ -422,15 +451,19 @@ public class Assembler {
             for (int i = 1; i < lineData.length; i++) {
                 if (lineData[i].matches(SYMBOL_NAME_REGEX)) {
                     // todo: allow zero-page addresses?
-                    throw new Exception("Symbols not allowed here; must be a single byte");
+                    throw new AssemblerException("Symbols not allowed here; must be a single byte", lineNumber);
                 } else {
                     // parse the number there
                     if (lineData[i].charAt(0) == '#') {
-                        throw new Exception("Invalid syntax");
+                        throw new AssemblerException("Invalid syntax", lineNumber);
                     } else {
                         // fetch our number
-                        byte data = (byte) (InstructionParser.parseNumber(lineData[i]) & 0xFF);
-                        definedBytes[i - 1] = data;
+                        try {
+                            byte data = (byte) (InstructionParser.parseNumber(lineData[i]) & 0xFF);
+                            definedBytes[i - 1] = data;
+                        } catch (Exception e) {
+                            throw new AssemblerException(e.getMessage(), this.lineNumber);
+                        }
                     }
                 }
 
@@ -448,7 +481,7 @@ public class Assembler {
 
         int numWords = lineData.length - 1;
         if (numWords == 0) {
-            throw new Exception("Must define words");
+            throw new AssemblerException("Must define words", lineNumber);
         } else {
             // create an array to store the defined words *in little-endian format*
             byte[] definedWords = new byte[2 * numWords];
@@ -458,7 +491,14 @@ public class Assembler {
                 if (lineData[i].matches(SYMBOL_NAME_REGEX)) {
                     // add this memory address to the relocation table
                     String fullSymbolName = this.getFullSymbolName(lineData[i]);
-                    this.relocationTable.add(new RelocationSymbol(fullSymbolName, this.currentOrigin, this.currentOffset, AddressingMode.Absolute, true));
+                    this.relocationTable.add(new RelocationSymbol(
+                            fullSymbolName,
+                            this.currentOrigin,
+                            this.currentOffset,
+                            AddressingMode.Absolute,
+                            this.lineNumber,
+                            true
+                    ));
 
                     // temporarily store 0 here
                     definedWords[arrIndex] = 0;
@@ -466,16 +506,20 @@ public class Assembler {
                 } else {
                     // parse the number there
                     if (lineData[i].charAt(0) == '#') {
-                        throw new Exception("Invalid syntax");
+                        throw new AssemblerException("Invalid syntax", this.lineNumber);
                     } else {
                         // fetch the number
-                        short num = InstructionParser.parseNumber(lineData[i]);
-                        byte numLow = (byte) (num & 0xFF);
-                        byte numHigh = (byte) ((num >> 8) & 0xFF);
+                        try {
+                            short num = InstructionParser.parseNumber(lineData[i]);
+                            byte numLow = (byte) (num & 0xFF);
+                            byte numHigh = (byte) ((num >> 8) & 0xFF);
 
-                        // add the bytes (low, high) to the array
-                        definedWords[arrIndex] = numLow;
-                        definedWords[arrIndex + 1] = numHigh;
+                            // add the bytes (low, high) to the array
+                            definedWords[arrIndex] = numLow;
+                            definedWords[arrIndex + 1] = numHigh;
+                        } catch (Exception e) {
+                            throw new AssemblerException(e.getMessage(), this.lineNumber);
+                        }
                     }
                 }
 
@@ -485,6 +529,43 @@ public class Assembler {
 
             // finally, copy our words to the buffer
             this.copyToBuffer(definedWords);
+        }
+    }
+
+    private void createMacro(String[] lineData) throws Exception {
+        /*
+        Creates a macro in the assembler
+        Syntax is:
+            .macro  <name>  <value>
+         */
+
+        // First, make sure our line is at least 3 strings long
+        if (lineData.length >= 3) {
+            // Next, get the name and make sure it is a valid symbol name
+            String name = lineData[1];
+            if (name.matches(SYMBOL_NAME_REGEX)) {
+                // Finally, get the value
+                try {
+                    short macroValue = InstructionParser.parseNumber(lineData[2]);
+                    byte dataLength;
+
+                    // now, we can check to see if the value is between 0 and 255; if so, we can perform a small optimization
+                    if (macroValue >= 0 && macroValue <= 255) {
+                        dataLength = 1;
+                    } else {
+                        dataLength = 2;
+                    }
+
+                    // finally, construct the symbol
+                    this.symbolTable.put(name, new AssemblerSymbol(name, macroValue, dataLength));
+                } catch (Exception e) {
+                    throw new AssemblerException(e.getMessage(), lineNumber);
+                }
+            } else {
+                throw new AssemblerException("Invalid symbol name", lineNumber);
+            }
+        } else {
+            throw new AssemblerException("Invalid directive syntax", lineNumber);
         }
     }
 
@@ -503,6 +584,7 @@ public class Assembler {
         this.relocationTable = new Vector<>();
         this.buffer = new byte[]{};
         this.currentOrigin = (short)0x8000; // default program origin is 0x8000
+        this.lineNumber = 0;
         this.rsAddress = (short)0x0200;  // default rs origin is 0x0200
         this.banks = new Vector<>();
     }

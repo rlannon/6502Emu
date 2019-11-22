@@ -7,12 +7,20 @@ class AssemblerSymbol {
      */
 
     private String name;    // the name of the symbol
-    private short data;  // the address of the symbol (the data)
+    private short data; // the address of the symbol (the data)
+    private byte length; // how long (in bytes) the symbol is (helps to optimize and check for errors)
 
     short getData() { return this.data; }
 
-    AssemblerSymbol(String name, short data) {
+    byte getLength() { return this.length; }
+
+    AssemblerSymbol(String name, short data, byte length) {
         this.name = name;
         this.data = data;
+        this.length = length;
+    }
+
+    AssemblerSymbol(String name, short data) {
+        this(name, data, (byte)4);
     }
 }
