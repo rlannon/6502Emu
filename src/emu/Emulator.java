@@ -69,16 +69,16 @@ public class Emulator {
         return this.inputs;
     }
 
+    public void removeInput(Input toRemove) {
+        this.inputs.remove(toRemove.getMappedKeyCode());
+    }
+
     public void step() throws Exception {
         if (this.cpu.debugMode) {
             this.debugger.step();
         } else {
             this.cpu.step();
         }
-    }
-
-    void run() throws Exception {
-        this.run(false);
     }
 
     public void run(boolean outputEnabled) throws Exception {
@@ -169,6 +169,25 @@ public class Emulator {
         this.cpu.signal(Signal.NMI);
     }
 
+    public void irq() {
+        // triggers a CPU IRQ
+        this.cpu.signal(Signal.IRQ);
+    }
+
+    public boolean isSet(byte flag) {
+        return this.cpu.isSet(flag);
+    }
+
+    public void writeToMemory(int address, byte value) {
+        /*
+        Writes a byte to memory; to be used for input handling
+        @param  address The address in memory we are writing to
+        @param  value   The value we wish to write
+         */
+
+        this.cpu.memory[address] = value;
+    }
+
     public void coreDump() throws Exception {
         if (this.cpu.debugMode) {
             this.cpu.debugger.generateCoreDump();
@@ -187,10 +206,6 @@ public class Emulator {
 
     public boolean isRunning() {
         return !this.cpu.halted;
-    }
-
-    public boolean canDraw() {
-        return (this.cpu.memory[LATCH] != 0);
     }
 
     public byte[] getMemory() {

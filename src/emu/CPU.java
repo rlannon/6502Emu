@@ -84,7 +84,7 @@ public class CPU {
 
     // Flag access
 
-    private boolean isSet(byte flag) {
+    boolean isSet(byte flag) {
         return (this.status & flag) == flag;
     }
 

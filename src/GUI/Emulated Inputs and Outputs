@@ -1,0 +1,26 @@
+Emulated inputs and outputs
+
+The CPU allows users to configure emulated inputs through the keyboard and allows for one emulated output screen.
+
+The screen is a 32 x 32 memory-mapped chromatic screen located beginning at address $2400. The available colors are:
+    - $00: Black
+    - $01: White
+    - $02: Red
+    - $03: Cyan
+    - $04: Purple
+    - $05: Green
+    - $06: Blue
+    - $07: Yellow
+    - $08: Orange
+    - $09: Brown
+    - $0A: Pink
+    - $0B: Dark gray
+    - $0C: Gray
+    - $0D: Light green
+    - $0E: Light blue
+    - $0F: Light gray
+All other values will be rendered as black.
+
+Inputs can be mapped to a specific keyboard character or to the keyboard as a whole. If the latter is chosen, any
+individual key bindings set will be ignored.
+Inputs may trigger an IRQ

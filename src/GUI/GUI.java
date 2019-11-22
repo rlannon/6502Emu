@@ -1,6 +1,7 @@
 package GUI;
 
 // custom packages
+import assembler.Status;
 import emu.DrawGraphics;
 import emu.Emulator;
 
@@ -318,22 +319,35 @@ public class GUI extends Application {
         this.screen.setOnKeyPressed(keyEvent -> {
             // Get the text of the key
             String key = (keyEvent.getCharacter().equals(KeyEvent.CHAR_UNDEFINED)) ? keyEvent.getCode().toString() : keyEvent.getText();
-            System.out.println("Key pressed: " + key);
 
-            // See if we have registered inputs
-            if (emu.hasInput(key)) {
-                System.out.println("Input registered for key");
+            // See if we have registered inputs for the keyboard
+            // if we do, it overrides all other keyboard inputs
+            if (emu.hasInput("KBD")) {
+                // whole keyboard is mapped
+                Input registeredInput = emu.getInput("KBD");
+                emu.writeToMemory(
+                        registeredInput.getAddress(),
+                        (byte)keyEvent.getCode().getCode()
+                );
+
+                // trigger an IRQ if the input necessitates an IRQ AND if the I flag is clear
+                if (registeredInput.isTriggersIRQ() && !emu.isSet(Status.INTERRUPT_DISABLE))
+                    emu.irq();
+            } else if (emu.hasInput(key)) {
+                // individually-mapped key
                 Input registeredInput = emu.getInput(key);
-                System.out.println("Registered: \n\tTriggers IRQ: " + registeredInput.isTriggersIRQ() + "\n\tMemory: " +
-                        String.format("$%04x", registeredInput.getAddress()));
-            } else {
-                System.out.println("Ignoring; no input registered for key");
+                emu.writeToMemory(
+                        registeredInput.getAddress(),
+                        (byte)keyEvent.getCode().getCode()
+                );
+
+                // trigger an IRQ if the input necessitates an IRQ AND if the I flag is clear
+                if (registeredInput.isTriggersIRQ() && !emu.isSet(Status.INTERRUPT_DISABLE))
+                    emu.irq();
             }
         });
 
-        // todo: allow user input
-        // finally, show the stage
-
+        // fshow the stage
         primaryStage.setScene(primaryScene);
         primaryStage.show();
 
@@ -423,55 +437,88 @@ public class GUI extends Application {
         grid.setAlignment(Pos.CENTER_LEFT);
         grid.setHgap(10);
         grid.setVgap(10);
-        grid.setPadding(new Insets(25, 25, 25, 25));
+        grid.setPadding(new Insets(10, 10, 10, 10));
 
-        Scene inputEmuSetup = new Scene(grid, 300, 275);
-        inputStage.setScene(inputEmuSetup);
+        Scene inputScene = new Scene(grid);
+        inputStage.setScene(inputScene);
         Text sceneTitle = new Text("Add Input");
         sceneTitle.setFont(Font.font("Tahoma", FontWeight.NORMAL, 20));
         grid.add(sceneTitle, 0, 0, 2, 1);
 
-        Label addressLabel = new Label("Memory-mapped Address:");
+        Label addressLabel = new Label("Address:");
         grid.add(addressLabel, 0, 1);
         TextField addressField = new TextField();
-        grid.add(addressField, 1, 1);
+        grid.add(addressField, 1, 1, 2, 1);
+
         Label keyMapLabel = new Label("Mapped Key:");
         grid.add(keyMapLabel, 0, 2);
         TextField mappedKey = new TextField();
-        grid.add(mappedKey, 1, 2);
+        mappedKey.setEditable(false);
+        grid.add(mappedKey, 1, 2, 2, 1);
+
+        final ComboBox<String> inputSelector = new ComboBox<>();
+        inputSelector.getItems().addAll(
+                "Keyboard",
+                "Key Binding"
+        );
+        grid.add(inputSelector, 3, 2, 2, 1);
+
+        Button bindKeyButton = new Button("Bind Key...");
+        bindKeyButton.setDisable(true);
+        bindKeyButton.setOnAction(new EventHandler<>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                bindKeyButton.setOnKeyPressed(new EventHandler<>() {
+                    @Override
+                    public void handle(KeyEvent keyEvent) {
+                        mappedKey.clear();
+                        mappedKey.appendText(keyEvent.getCode().toString());
+                        keyEvent.consume();
+                        grid.requestFocus();
+                    }
+                });
+            }
+        });
+
+        grid.add(bindKeyButton, 3, 3, 2, 1);
+
+        inputSelector.setOnAction(actionEvent -> {
+            if (inputSelector.getSelectionModel().getSelectedItem().equals("Key Binding")) {
+                bindKeyButton.setDisable(false);
+            } else {
+                bindKeyButton.setDisable(true);
+                mappedKey.clear();
+                mappedKey.appendText("KBD");    // if the input is keyboard, the key is KBD
+            }
+        });
+
         CheckBox triggerIRQ = new CheckBox();
         triggerIRQ.setText("Trigger IRQ");
         triggerIRQ.setSelected(false);
-        grid.add(triggerIRQ, 0, 3);
+        grid.add(triggerIRQ, 0, 4);
 
         Button addBtn = new Button("Add Input");
         HBox hbBtn = new HBox(10);
         hbBtn.setAlignment(Pos.BOTTOM_CENTER);
         hbBtn.getChildren().add(addBtn);
-        grid.add(hbBtn, 1, 6);
+        grid.add(hbBtn, 0, 6);
 
-        addBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                System.out.println("address: " + addressField.getCharacters());
-                System.out.println("key binding: " + mappedKey.getCharacters());    // todo: change to dropdown with 'keyboard' or 'mouse'
-                System.out.println("trigger IRQ: " + triggerIRQ.isSelected());
-
-                try {
-                    if (mappedKey.getCharacters().length() == 1) {
-                        emu.addInput(mappedKey.getCharacters().toString().toUpperCase(),
-                                getAddress("Address", addressField.getCharacters().toString()),
-                                triggerIRQ.isSelected());
-                    } else {
-                        throw new Exception("Key must be a single character");
-                    }
-                } catch (Exception e) {
-                    errorAlert("Cannot add input", e.getMessage());
+        addBtn.setOnAction(actionEvent -> {
+            try {
+                // todo: allow user to use entire keyboard as binding
+                if (mappedKey.getCharacters().length() != 0) {
+                    emu.addInput(mappedKey.getCharacters().toString().toUpperCase(),
+                            getAddress("Address", addressField.getCharacters().toString()),
+                            triggerIRQ.isSelected());
+                } else {
+                    throw new Exception("Must have key binding");
                 }
-
-                refreshInputs(inputs);
-                inputStage.close();
+            } catch (Exception e) {
+                errorAlert("Cannot add input", e.getMessage());
             }
+
+            updateInputsTableView(inputs);
+            inputStage.close();
         });
 
         inputStage.show();
@@ -688,16 +735,16 @@ public class GUI extends Application {
         Displays the menu for managing our inputs
          */
         Stage configInputsStage = new Stage();
-        configInputsStage.setTitle("Configure emulated inputs");
+        configInputsStage.setTitle("Configure inputs");
 
-        HBox hbox = new HBox(8);
-        VBox leftCol = new VBox(8);
-        VBox rightCol = new VBox(8);
-        hbox.getChildren().addAll(leftCol, rightCol);
+        GridPane grid = new GridPane();
+        grid.setPadding(new Insets(10, 10, 10, 10));
+        grid.setAlignment(Pos.CENTER_LEFT);
+        grid.setMaxWidth(275);
 
         // create a table to list our inputs
         TableView<Input> inputs = new TableView<>();
-        leftCol.getChildren().add(inputs);
+        grid.add(inputs, 0, 0, 3, 5);
 
         // create columns for the table
         TableColumn<Input, String> keyBindingCol = new TableColumn<>("Key");
@@ -713,15 +760,29 @@ public class GUI extends Application {
         inputs.getColumns().add(keyBindingCol);
         inputs.getColumns().add(addressCol);
         inputs.getColumns().add(irqCol);
-        refreshInputs(inputs);
+        updateInputsTableView(inputs);
 
         // Create a button to allow us to add inputs
         Button addInputBtn = new Button("Add Input");
         addInputBtn.setOnAction(actionEvent -> addInput(inputs));
-        leftCol.getChildren().add(addInputBtn);
+        grid.add(addInputBtn, 0, 6, 2, 1);
+
+        // Create a button to allow us to remove inputs
+        Button removeInputBtn = new Button("Remove Input");
+        removeInputBtn.setOnAction(actionEvent -> {
+            if (inputs.getItems().size() == 0) {
+                errorAlert("Cannot remove input", "You must select an input to delete");
+            } else {
+                for (Input i : inputs.getSelectionModel().getSelectedItems()) {
+                    emu.removeInput(i);
+                }
+                updateInputsTableView(inputs);
+            }
+        });
+        grid.add(removeInputBtn, 2, 6, 2, 1);
 
         // display the dialog
-        Scene inputScene = new Scene(hbox);
+        Scene inputScene = new Scene(grid, 275, 350);
         configInputsStage.setScene(inputScene);
         configInputsStage.show();
     }
@@ -760,7 +821,7 @@ public class GUI extends Application {
         );
     }
 
-    private void refreshInputs(TableView<Input> inputs) {
+    private void updateInputsTableView(TableView<Input> inputs) {
         // now, add our items
         inputs.getItems().clear();
         for (Input i: emu.getAllInputs().values()) {
