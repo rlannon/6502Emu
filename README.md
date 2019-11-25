@@ -18,6 +18,11 @@ The assembly syntax and conventions I use are fairly standard:
 
 * Directives must be prefixed with a dot. Currently supported:
   * ```.org $XXXX``` - Indicates the assembler should begin laying code at the specified address
+  * ```.rs <length> <name>``` - Reserves some memory (variable creation)
+  * ```.rsset <address>``` - Sets the address that should be used for the ```.rs``` directive
+  * ```.macro <name> <value>``` - Defines a macro; all references to it in the code will be replaced with the macro's value
+  * ```.db <bytes>``` or ```.byte <bytes>``` - Defines a series of bytes in program memory
+  * ```.dw <words>``` or ```.word <words>``` - Defines a series of words in program memory
 * Labels may contain:
   * letters
   * numbers, though they may not begin with a number
