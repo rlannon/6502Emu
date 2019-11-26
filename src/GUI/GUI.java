@@ -272,7 +272,8 @@ public class GUI extends Application {
         userConsole = new TextArea();
         userConsole.setMaxWidth(256);
         userConsole.setMinHeight(500);
-        userConsole.setEditable(false);
+        userConsole.setEditable(false); // user cannot edit this textarea
+        userConsole.setWrapText(true);  // wrap text when it hits the end of the console
         userConsole.setFont(Font.font("Courier New", FontWeight.NORMAL, 12));
 
         Label consoleLabel = new Label("Message Console");
@@ -810,18 +811,18 @@ public class GUI extends Application {
          */
 
         registerMonitor.clear();
-        String binaryIntegers = String.format("%8s", Integer.toBinaryString(emu.debugger.getStatus())).replace(' ', '0');
+        String binaryIntegers = String.format("%8s", Integer.toBinaryString(emu.debugger.getStatus() & 0xFF)).replace(' ', '0');
         binaryIntegers = binaryIntegers.replace("", " ").substring(1);
-        registerMonitor.appendText(
-                String.format("A: $%02x\nX: $%02x\nY: $%02x\nSP: $%02x\n\nPC: $%04x\n\nSTATUS:\n\tN V B - D I Z C\n\t%16s",
-                        emu.debugger.getA(),
-                        emu.debugger.getX(),
-                        emu.debugger.getY(),
-                        emu.debugger.getStackPointer(),
-                        emu.debugger.getPC(),
-                        binaryIntegers
-                )
+        String displayText = String.format("A: $%02x\nX: $%02x\nY: $%02x\nSP: $%02x\n\nPC: $%04x\n\nSTATUS:\n\tN V B - D I Z C\n\t%16s",
+                emu.debugger.getA(),
+                emu.debugger.getX(),
+                emu.debugger.getY(),
+                emu.debugger.getStackPointer(),
+                emu.debugger.getPC(),
+                binaryIntegers
         );
+
+        registerMonitor.appendText(displayText);
     }
 
     private void updateInputsTableView(TableView<Input> inputs) {

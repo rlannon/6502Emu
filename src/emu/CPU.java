@@ -950,10 +950,12 @@ public class CPU {
             // DEX
             case 0xCA:
                 this.x--;
+                this.updateNZFlags(this.x);
                 break;
             // INX
             case 0xE8:
                 this.x++;
+                this.updateNZFlags(this.x);
                 break;
             // TAY
             case 0xA8:
@@ -966,10 +968,12 @@ public class CPU {
             // DEY
             case 0x88:
                 this.y--;
+                this.updateNZFlags(this.y);
                 break;
             // INY
             case 0xC8:
                 this.y++;
+                this.updateNZFlags(this.y);
                 break;
 
             /*

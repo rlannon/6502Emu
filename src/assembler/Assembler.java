@@ -202,8 +202,10 @@ public class Assembler {
 
                             // warn the user that a memory optimization can be performed if the label is declared before the instruction
                             // todo: display warnings in GUI console
-                            System.out.println("Warning: must insert a NOP due to symbol resolution for '" + rSym.getName() + "'. A memory " +
-                                    "optimization can be performed if the macro is placed before this instruction.");
+                            System.out.println("Warning: must insert a NOP due to symbol resolution for '" +
+                                    rSym.getName() + "' on line " + rSym.getLineNumber() + ". A memory optimization can " +
+                                    "be performed if the macro is placed before this instruction. Instead, filling empty" +
+                                    "byte with $EA (a NOP)");
 
                             // modify the opcode and change the address data
                             opcode = InstructionParser.getOpcode(mnemonic, addrMode);
