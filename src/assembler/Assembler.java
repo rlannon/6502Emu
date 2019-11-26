@@ -3,6 +3,7 @@ package assembler;
 import emu_format.*;
 
 import java.io.*;
+import java.security.KeyException;
 import java.util.Scanner;
 import java.util.Vector;
 import java.util.regex.Pattern;
@@ -23,7 +24,7 @@ public class Assembler {
 
     // some patterns
     private final static Pattern TO_IGNORE = Pattern.compile("[\\s]|(;.*)");
-    private final static String SYMBOL_NAME_REGEX = "(?!\\$)(#?\\.?[a-zA-Z_]+[0-9a-zA-Z_]*,?)";
+    static final String SYMBOL_NAME_REGEX = "(?!\\$)(\\(?#?\\.?[a-zA-Z_]+[0-9a-zA-Z_]*\\)?,?)";
 
     /*
 
@@ -177,6 +178,40 @@ public class Assembler {
                         throw new AssemblerException("Invalid addressing mode for label reference", rSym.getLineNumber());
                     }
 
+                    // if the asmSym length is 1 and the instruction supports zero-page addressing, use the zero page
+                    if (!rSym.isDefinition()) {
+                        byte opcode = relocBank.getData()[rSym.getOffset()];
+                        String mnemonic = InstructionParser.getMnemonic(opcode).getKey();
+                        if (
+                                (asmSym.getLength() == 1) &&
+                                (rSym.getAddressingMode() != AddressingMode.Immediate) && (rSym.getAddressingMode() != AddressingMode.Relative) &&
+                                ((InstructionParser.supportsAddressingMode(mnemonic, AddressingMode.ZeroPage)) ||
+                                        (InstructionParser.supportsAddressingMode(mnemonic, AddressingMode.ZeroPageX)) ||
+                                        (InstructionParser.supportsAddressingMode(mnemonic, AddressingMode.ZeroPageY))
+                                )
+                        ) {
+                            // get the new addressing mode
+                            int addrMode;
+                            if (rSym.getAddressingMode() == AddressingMode.Absolute) {
+                               addrMode = AddressingMode.ZeroPage;
+                            } else if (rSym.getAddressingMode() == AddressingMode.AbsoluteX) {
+                               addrMode = AddressingMode.ZeroPageX;
+                            } else {
+                               addrMode = AddressingMode.ZeroPageY;
+                            }
+
+                            // warn the user that a memory optimization can be performed if the label is declared before the instruction
+                            // todo: display warnings in GUI console
+                            System.out.println("Warning: must insert a NOP due to symbol resolution for '" + rSym.getName() + "'. A memory " +
+                                    "optimization can be performed if the macro is placed before this instruction.");
+
+                            // modify the opcode and change the address data
+                            opcode = InstructionParser.getOpcode(mnemonic, addrMode);
+                            relocBank.setData(rSym.getOffset(), new byte[]{ opcode });
+                            littleEndianAddressData = new byte[]{ (byte)(asmSym.getData() & 0xFF), (byte)0xEA};
+                        }
+                    }
+
                     // replace the byte at offset; if it is an instruction, then use offset + 1 to leave room for the instruction byte
                     relocBank.setData(rSym.getOffset() + (rSym.isDefinition() ? 0 : 1), littleEndianAddressData);
                 } else {
@@ -214,10 +249,17 @@ public class Assembler {
             if (line.length() > 0 && lineData.length > 0) {
                 // check to see if we have an instruction
                 if (InstructionParser.isMnemonic(lineData[0])) {
+                    // todo: resolve symbols in page 0 if they have been declared, removing the need for a NOP in symbol resolution
+                    // todo: resolving here will allow indirect modes to be used with labels as well
                     // check to see if lineData[1] is a symbol name; if so, add it to the relocation table
                     if (lineData.length > 1) {
                         if (lineData[1].matches(SYMBOL_NAME_REGEX)) {
                             String symName = lineData[1];
+
+                            // if we have a paren, skip it
+                            if (symName.charAt(0) == '(') {
+                                symName = symName.substring(1);
+                            }
 
                             // if we have the address-of-symbol operator (#), skip it
                             if (symName.charAt(0) == '#') {
@@ -229,18 +271,40 @@ public class Assembler {
                                 symName = symName.substring(0, symName.length() - 1);
                             }
 
+                            // if we have a closing paren, skip it
+                            if (symName.charAt(symName.length() - 1) == ')') {
+                                symName = symName.substring(0, symName.length() - 1);
+                            }
+
                             // if we have a ., get the parent label
                             if (symName.charAt(0) == '.') {
                                 symName = getFullSymbolName(symName);
                             }
 
-                            this.relocationTable.add(new RelocationSymbol(
-                                    symName,
-                                    this.currentOrigin,
-                                    this.currentOffset,
-                                    InstructionParser.getAddressingMode(lineData),
-                                    lineNumber
-                            ));
+                            // Look up the symbol and replace it now if it is a zero-page address
+                            AssemblerSymbol sym = this.symbolTable.get(symName);
+                            if (
+                                    (sym != null) &&
+                                    (sym.getLength() == 1) &&
+                                    (
+                                            (InstructionParser.supportsAddressingMode(lineData[0], AddressingMode.ZeroPage)) ||
+                                            (InstructionParser.supportsAddressingMode(lineData[0], AddressingMode.ZeroPageX)) ||
+                                            (InstructionParser.supportsAddressingMode(lineData[0], AddressingMode.ZeroPageY)) ||
+                                            (InstructionParser.supportsAddressingMode(lineData[0], AddressingMode.IndirectX)) ||
+                                            (InstructionParser.supportsAddressingMode(lineData[0], AddressingMode.IndirectY))
+                                    )
+                            ) {
+                                String newLineData = lineData[1].replace(symName, String.format("$%02x", sym.getData() & 0xFF));
+                                lineData[1] = newLineData;
+                            } else {
+                                this.relocationTable.add(new RelocationSymbol(
+                                        symName,
+                                        this.currentOrigin,
+                                        this.currentOffset,
+                                        InstructionParser.getAddressingMode(lineData),
+                                        lineNumber
+                                ));
+                            }
                         }
                     }
 
@@ -549,8 +613,8 @@ public class Assembler {
                     short macroValue = InstructionParser.parseNumber(lineData[2]);
                     byte dataLength;
 
-                    // now, we can check to see if the value is between 0 and 255; if so, we can perform a small optimization
-                    if (macroValue >= 0 && macroValue <= 255) {
+                    // now, we can check to see if the line data only contains one byte; if so, we can perform a small optimization
+                    if (lineData[2].length() < 4) {     // we want $00 to be zp, but $0000 to be absolute
                         dataLength = 1;
                     } else {
                         dataLength = 2;

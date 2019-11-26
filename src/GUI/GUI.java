@@ -24,6 +24,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -35,6 +36,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 // Other JDK packages
+import javax.swing.text.Position;
 import java.io.File;
 
 public class GUI extends Application {
@@ -251,7 +253,8 @@ public class GUI extends Application {
         rightCol.setPadding(new Insets(10, 10, 10, 10));
         outer.getChildren().add(hbox);
         hbox.getChildren().addAll(leftCol, rightCol);
-        Scene primaryScene = new Scene(outer, 700, 600);
+
+        Scene primaryScene = new Scene(outer, 550, 600);
 
         // add the register and status monitor
         registerMonitor = new TextArea();

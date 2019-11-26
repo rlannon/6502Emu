@@ -70,6 +70,26 @@ class InstructionParser {
             new Instruction("STY", new byte[]{(byte)0xFF, (byte)0x84, (byte)0x94, (byte)0xFF, (byte)0x8c, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
     };
 
+    static boolean supportsAddressingMode(String mnemonic, int mode) throws Exception {
+        /*
+        Determines whether the instruction in question supports the addressing mode specified
+         */
+
+        mnemonic = mnemonic.toUpperCase();
+        Instruction toTest = null;
+        for (Instruction cur: OPCODES) {
+            if (cur.getMnemonic().equals(mnemonic)) {
+                toTest = cur;
+                break;
+            }
+        }
+
+        if (toTest == null)
+            throw new Exception("No such mnemonic");
+        else
+            return (toTest.getAddressingMode(mode) != (byte)0xFF);
+    }
+
     static boolean isMnemonic(String candidate) {
         // Determines whether the supplied string is a mnemonic or not
         boolean found = false;
@@ -90,7 +110,7 @@ class InstructionParser {
         return found;
     }
 
-    private static byte getOpcode(String mnemonic, int addressingMode) throws Exception {
+    static byte getOpcode(String mnemonic, int addressingMode) throws Exception {
         boolean found = false;
         int i = 0;
         mnemonic = mnemonic.toUpperCase();
@@ -339,7 +359,7 @@ class InstructionParser {
                 return new byte[]{opcode};
             } else {
                 // if we have a label, the value should be 0; otherwise, use parseNumber
-                value = (data[1].matches("\\.?#?[a-zA-Z_]+.+")) ? 0x00 : parseNumber(data[1]);
+                value = (data[1].matches(Assembler.SYMBOL_NAME_REGEX)) ? 0x00 : parseNumber(data[1]);
 
                 // get instruction width based on addressing mode
                 if (addressingMode == AddressingMode.Immediate || addressingMode == AddressingMode.IndirectX ||
