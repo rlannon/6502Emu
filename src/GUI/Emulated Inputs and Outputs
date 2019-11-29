@@ -19,7 +19,7 @@ The screen is a 32 x 32 memory-mapped chromatic screen located beginning at addr
     - $0D: Light green
     - $0E: Light blue
     - $0F: Light gray
-All other values will be rendered as black.
+Only the low nibble matters; the high nibble will be ignored. As such, $76 will be rendered as blue, as will $06.
 
 Inputs can be mapped to a specific keyboard character or to the keyboard as a whole. If the latter is chosen, any
 individual key bindings set will be ignored. When a key with a binding is pressed, its ASCII value will be written to the

@@ -4,10 +4,12 @@ The .emu file format is used by the emulator to save and retrieve data about pro
 It is formatted as follows (using stickshift syntax):
 
 prg_header:
-    (4) magic_number = 0xC0, 'E', 'M', 'U'  ->  Used to identify the file format
-    (1) num_banks   ->  The number of banks of program data
-    (2) num_debug_symbols   ->  The number of debug symbols present
-    (1) config  ->  Whether config data is present (1) or not (0).
+    0x00 - (4) magic_number = 0xC0, 'E', 'M', 'U'  ->  Used to identify the file format
+    0x04 - (2) version ->  the file version
+    0x06 - (1) num_banks   ->  The number of banks of program data
+    0x07 - (2) num_debug_symbols   ->  The number of debug symbols present
+    0x09 - (1) config  ->  Whether config data is present (1) or not (0).
+    0x0a - (6) reserved = 0x00 ->  reserved for future use
 
 for each as indicated by prg_header.num_banks:
     (2) org ->  The origin address for the bank
@@ -21,5 +23,9 @@ for each as indicated by prg_header.num_debug_symbols:
     (2) ->  The address of the line
 
 if prg_header.config:
-    config_header:
-        // config data
+    (2) num_configs ->  The number of configurations present
+    for each as indicated by num_configs:
+        (2) address (big-endian)    ->  The mapped address
+        (1) IRQ ->  boolean value; 0 = false, 1 = true
+        (1) key_code_len    ->  the length of the key code string
+        (key_code_len) key_code: char[] ->  the actual key code

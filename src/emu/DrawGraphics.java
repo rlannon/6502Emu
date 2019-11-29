@@ -32,6 +32,8 @@ public class DrawGraphics implements Runnable {
             for (int i = 0; i < BUFFER_LEN; i++) {
                 // get the color of the pixel based on the value at the address
                 byte colorByte = this.memory[BUFFER_MIN + i];
+                colorByte &= 0x0F;  // we only care about the low nibble
+
                 Color color;
                 switch (colorByte) {
                     case 1:
@@ -86,7 +88,7 @@ public class DrawGraphics implements Runnable {
 
                 // now that we have the color, get the coordinate from the address
                 int y = (i / GUI.screenWidth) * GUI.pxHeight;
-                int x = i * GUI.pxWidth;
+                int x = (i % GUI.screenWidth) * GUI.pxWidth;
 
                 // fill the rectangle accordingly
                 gc.setFill(color);

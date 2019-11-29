@@ -24,7 +24,7 @@ public class Assembler {
 
     // some patterns
     private final static Pattern TO_IGNORE = Pattern.compile("[\\s]|(;.*)");
-    static final String SYMBOL_NAME_REGEX = "(?!\\$)(\\(?#?\\.?[a-zA-Z_]+[0-9a-zA-Z_]*\\)?,?)";
+    static final String SYMBOL_NAME_REGEX = "(?!\\$)(\\(?#?\\.?[a-zA-Z_]+[0-9a-zA-Z_]+\\)?,?)";
 
     /*
 
@@ -478,7 +478,9 @@ public class Assembler {
                     if (name.matches(SYMBOL_NAME_REGEX) && (name.charAt(0) != '#')) {
                         // add the symbol
                         name = this.getFullSymbolName(name);
-                        this.symbolTable.put(name, new AssemblerSymbol(name, this.rsAddress));
+                        // the length determines whether we can use zp addressing
+                        byte length = (this.rsAddress >= 0 && this.rsAddress <= 255) ? (byte)1 : (byte)2;
+                        this.symbolTable.put(name, new AssemblerSymbol(name, this.rsAddress, length));
                         this.rsAddress += numBytes;  // advance rsAddress by the number of bytes in the symbol
                     } else {
                         throw new AssemblerException("Invalid symbol name", this.lineNumber);
@@ -615,8 +617,8 @@ public class Assembler {
                     short macroValue = InstructionParser.parseNumber(lineData[2]);
                     byte dataLength;
 
-                    // now, we can check to see if the line data only contains one byte; if so, we can perform a small optimization
-                    if (lineData[2].length() < 4) {     // we want $00 to be zp, but $0000 to be absolute
+                    // now, we can check to see if the line data is 0 < 255; if so, we can perform a small optimization
+                    if (macroValue >= 0 && macroValue <= 255) {     // we want values from 0 to 255 to use zp addressing
                         dataLength = 1;
                     } else {
                         dataLength = 2;

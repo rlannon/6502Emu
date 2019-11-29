@@ -22,11 +22,7 @@ public class Input {
         return this.triggersIRQ;
     }
 
-    Input(String key, short address) {
-        this(key, address, false);
-    }
-
-    Input(String mappedKeyCode, int address, boolean triggersIRQ) {
+    public Input(String mappedKeyCode, int address, boolean triggersIRQ) {
         this.mappedKeyCode = mappedKeyCode;
         this.address = address;
         this.triggersIRQ = triggersIRQ;

@@ -280,7 +280,7 @@ class InstructionParser {
                             } else if (data[2].toUpperCase().equals("Y")) {
                                 return AddressingMode.ZeroPageY;
                             } else {
-                                throw new Exception("Invalid addressing mode!");
+                                throw new Exception("Invalid addressing mode");
                             }
                         } else {
                             throw new Exception("Expected index");
@@ -314,6 +314,10 @@ class InstructionParser {
                 {
                     // Indirect may only be used with JMP, and syntax is JMP (MEMORY)
                     return AddressingMode.Indirect;
+                }
+                else if (data[0].toUpperCase().equals("JMP") && data[1].matches(Assembler.SYMBOL_NAME_REGEX)) {
+                    // JMP may use absolute as well
+                    return AddressingMode.Absolute;
                 }
                 else if (data[1].matches(INDIRECT_Y_PATTERN))
                 {
