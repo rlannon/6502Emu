@@ -252,7 +252,7 @@ public class CPU {
             case 0x65:
             case 0x75:
                 // len 2
-                operand = this.fetchByteFromMemory(this.fetchImmediateByte(), (opcode == 0x65) ? 0 : this.x);
+                operand = this.fetchByteFromMemory(this.fetchImmediateByte() & 0xFF, (opcode == 0x65) ? 0 : this.x);
                 this.add(operand);
                 break;
             // ADC: Absolute
@@ -295,12 +295,12 @@ public class CPU {
                 break;
             // AND: Zero
             case 0x25:
-                operand = this.fetchByteFromMemory(this.fetchImmediateByte());
+                operand = this.fetchByteFromMemory(this.fetchImmediateByte() & 0xFF);
                 this.and(operand);
                 break;
             // AND: Zero, X
             case 0x35:
-                operand = this.fetchByteFromMemory(this.fetchImmediateByte(), this.x);
+                operand = this.fetchByteFromMemory(this.fetchImmediateByte() & 0xFF, this.x);
                 this.and(operand);
                 break;
             // AND: Absolute
@@ -600,7 +600,7 @@ public class CPU {
             // EOR: Zero Page, X
             case 0x45:
             case 0x55:
-                this.xor(this.fetchByteFromMemory(this.fetchImmediateByte(), (opcode == 0x45) ? 0 : this.x));
+                this.xor(this.fetchByteFromMemory(this.fetchImmediateByte() & 0xFF, (opcode == 0x45) ? 0 : this.x));
                 break;
             // EOR: Absolute
             case 0x4D:
@@ -761,12 +761,14 @@ public class CPU {
                 break;
             // LDA: Zero
             case 0xA5:
-                this.a = this.fetchByteFromMemory(this.fetchImmediateByte());
+                address = this.fetchImmediateByte() & 0xFF;
+                this.a = this.fetchByteFromMemory(address);
                 this.updateNZFlags(this.a);
                 break;
             // LDA: Zero, X
             case 0xB5:
-                this.a = this.fetchByteFromMemory(this.fetchImmediateByte(), this.x);
+                address = this.fetchImmediateByte() & 0xFF;
+                this.a = this.fetchByteFromMemory(address, this.x);
                 this.updateNZFlags(this.a);
                 break;
             // LDA: Absolute
@@ -1129,13 +1131,13 @@ public class CPU {
 
             // SBC: Immediate
             case 0xE9:
-                this.subtract(this.fetchImmediateByte());
+                this.subtract(this.fetchImmediateByte() & 0xFF);
                 break;
             // SBC: ZP
             // SBC: ZP, X
             case 0xE5:
             case 0xF5:
-                this.subtract(this.fetchByteFromMemory(this.fetchImmediateByte(), (opcode == 0xE5) ? 0 : this.x));
+                this.subtract(this.fetchByteFromMemory(this.fetchImmediateByte() & 0xFF, (opcode == 0xE5) ? 0 : this.x));
                 break;
             // SBC: Absolute
             case 0xED:

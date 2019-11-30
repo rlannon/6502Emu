@@ -54,7 +54,7 @@ public class GUI extends Application {
     final public static int pxHeight = 8;
     final public static int screenWidth = 32;
 
-    private final int INSTRUCTIONS_PER_FRAME;
+    private final int INSTRUCTIONS_PER_FRAME = 5_000;
 
     private BooleanProperty genCoreDumpProperty;
 
@@ -378,7 +378,6 @@ public class GUI extends Application {
         primaryStage.setScene(primaryScene);
         primaryStage.show();
 
-        Random rand = new Random();
         // we will use an animation timer to control CPU speed
         timer = new AnimationTimer() {
             // The animation timer that is responsible for stepping the CPU, updating graphics, etc.
@@ -407,7 +406,7 @@ public class GUI extends Application {
                     if (emu.isDebugMode()) {
                         while (!emu.debugger.isPaused() && emu.isRunning() && i < INSTRUCTIONS_PER_FRAME) {
                             try {
-                                emu.writeToMemory(0xff, (byte) rand.nextInt(256));
+                                emu.writeToMemory(0xff, (byte)(Math.random() * 100));
                                 emu.debugger.step();
                                 i++;
                             } catch (Exception e) {
@@ -418,7 +417,7 @@ public class GUI extends Application {
                     } else {
                         while (emu.isRunning() && i < INSTRUCTIONS_PER_FRAME) {
                             try {
-                                emu.writeToMemory(0xff, (byte) rand.nextInt(256));
+                                emu.writeToMemory(0xff, (byte)(Math.random() * 100));
                                 emu.step();
                                 i++;
                             } catch (Exception e) {
@@ -440,6 +439,7 @@ public class GUI extends Application {
                         }
                     }
 
+                    // every frame, update the monitor
                     updateMemoryMonitor(0); // todo: get page from user
 
                     // wait for the draw thread to finish
@@ -1140,7 +1140,6 @@ public class GUI extends Application {
 
     public GUI() {
         this.emu = new Emulator(this);
-        this.INSTRUCTIONS_PER_FRAME = 5_000;
         this.screen = new Canvas(screenWidth * pxWidth, screenWidth * pxHeight);
         this.screenContext = screen.getGraphicsContext2D();
         this.lastNMI = 0;
