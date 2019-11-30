@@ -65,6 +65,7 @@ public class GUI extends Application {
 
     private DrawGraphics gDrawer;
 
+    private int monitorPage;
     private TextArea memoryMonitor;
     private TextArea registerMonitor;
     private TextArea userConsole;
@@ -228,6 +229,8 @@ public class GUI extends Application {
         launch(args);
     }
 
+    // todo: allow user to select page number for memory monitor
+
     @Override
     public void start(Stage primaryStage) {
         /*
@@ -334,7 +337,7 @@ public class GUI extends Application {
         memoryMonitor.setMinHeight(256);
         memoryMonitor.setEditable(false);
         memoryMonitor.setFont(Font.font("Courier New", FontWeight.NORMAL, 12));
-        updateMemoryMonitor(0);
+        updateMemoryMonitor();
 
         Label memoryMonitorLabel = new Label("Memory");
         memoryMonitorLabel.setLabelFor(memoryMonitor);
@@ -440,7 +443,7 @@ public class GUI extends Application {
                     }
 
                     // every frame, update the monitor
-                    updateMemoryMonitor(0); // todo: get page from user
+                    updateMemoryMonitor(); // todo: get page from user
 
                     // wait for the draw thread to finish
                     drawerThread.join();
@@ -560,11 +563,40 @@ public class GUI extends Application {
     private void showMemoryMonitor() {
         Stage memStage = new Stage();
         memStage.setTitle("Memory Monitor");
-        HBox hbox = new HBox(20);
-        hbox.setPadding(new Insets(10, 10, 10,10));
-        hbox.getChildren().add(memoryMonitor);
+        VBox vbox = new VBox(20);
+        vbox.setPadding(new Insets(10, 10, 10,10));
 
-        Scene memScene = new Scene(hbox, 600, 300);
+        TextField pageNumber = new TextField("0");
+        pageNumber.setEditable(true);
+
+        Label entryLabel = new Label("Page Number (hex)");
+        entryLabel.setLabelFor(pageNumber);
+
+        HBox entryBox = new HBox(20);
+        Button enterButton = new Button("Update Monitor");
+        enterButton.setOnAction(actionEvent -> {
+            String val = pageNumber.getCharacters().toString();
+            try {
+                int enteredValue = Integer.parseInt(val, 16);
+                if (enteredValue >= 0 && enteredValue <= 255) {
+                    monitorPage = enteredValue;
+                } else {
+                    pageNumber.clear();
+                    pageNumber.appendText("0");
+                }
+            } catch (Exception e) {
+                pageNumber.clear();
+                pageNumber.appendText("0");
+            }
+
+            updateMemoryMonitor();
+        });
+
+        entryBox.getChildren().addAll(entryLabel, pageNumber, enterButton);
+
+        vbox.getChildren().addAll(entryBox, memoryMonitor);
+
+        Scene memScene = new Scene(vbox, 600, 300);
         memStage.setScene(memScene);
         memStage.show();
     }
@@ -645,7 +677,7 @@ public class GUI extends Application {
                 try {
                     emu.debugger.step();
                     updateCPUMonitor();
-                    updateMemoryMonitor(0); // todo: update for page
+                    updateMemoryMonitor(); // todo: update for page
                 } catch (Exception e) {
                     emu.terminate();
                     userConsole.appendText("Error encountered: " + e.getMessage() + "\n");
@@ -848,20 +880,20 @@ public class GUI extends Application {
         screenContext.fillRect(0, 0, screenWidth * pxWidth, screenWidth * pxHeight);
     }
 
-    private void updateMemoryMonitor(int page) {
-        if (page > 255)
-            page = 255;
+    private void updateMemoryMonitor() {
+        if (monitorPage > 255)
+            monitorPage = 255;
 
         byte[] memory = emu.getMemory();
 
         memoryMonitor.clear();
         for (int i = 0; i < 16; i++) {
             memoryMonitor.appendText(
-                    String.format("$%04x: ", ((page * 256) + (i * 16)) & 0xFFFF)
+                    String.format("$%04x: ", ((monitorPage * 256) + (i * 16)) & 0xFFFF)
             );
 
             for (int j = 0; j < 16; j++) {
-                int val = memory[(page * 256) + (i * 16) + j] & 0xFF;
+                int val = memory[(monitorPage * 256) + (i * 16) + j] & 0xFF;
                 memoryMonitor.appendText(
                         String.format("$%02x ", val)
                 );
@@ -1143,6 +1175,7 @@ public class GUI extends Application {
         this.screen = new Canvas(screenWidth * pxWidth, screenWidth * pxHeight);
         this.screenContext = screen.getGraphicsContext2D();
         this.lastNMI = 0;
+        this.monitorPage = 0;   // default to the zero page
         this.gDrawer = new DrawGraphics("gDrawer", this.screenContext, this.emu.getMemory());
     }
 }
