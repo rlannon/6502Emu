@@ -97,6 +97,9 @@ public class CPU {
         } else if (value == 0) {
             this.clearFlag(Status.NEGATIVE);
             this.setFlag(Status.ZERO);
+        } else {
+            this.clearFlag(Status.NEGATIVE);
+            this.clearFlag(Status.ZERO);
         }
     }
 
@@ -386,15 +389,25 @@ public class CPU {
                     address = (int) this.fetchImmediateShort() & 0xFFFF;
                 }
 
-                if ((this.a & this.memory[address]) == 0) {
+                if (((this.a & 0xFF) & this.memory[address]) == 0) {
                     this.setFlag(Status.ZERO);
                 } else {
                     this.clearFlag(Status.ZERO);
                 }
 
-                // update the flags
-                if ((address & 0b10000000) != 0) this.setFlag(Status.NEGATIVE);
-                if ((address & 0b01000000) != 0) this.setFlag(Status.OVERFLOW);
+                // update the N and V flags
+                // N should be equal to bit 7
+                if ((address & 0b10000000) != 0)
+                    this.setFlag(Status.NEGATIVE);
+                else
+                    this.clearFlag(Status.NEGATIVE);
+
+                // V should be equal to bit 6
+                if ((address & 0b01000000) != 0)
+                    this.setFlag(Status.OVERFLOW);
+                else
+                    this.clearFlag(Status.OVERFLOW);
+
                 break;
 
             /*
@@ -875,6 +888,7 @@ public class CPU {
                     this.setFlag(Status.ZERO);
                 else
                     this.clearFlag(Status.ZERO);
+
                 break;
             // LSR: Zero Page
             // LSR: Zero Page, X
@@ -942,10 +956,12 @@ public class CPU {
             // TAX
             case 0xAA:
                 this.x = this.a;
+                this.updateNZFlags(this.a);
                 break;
             // TXA
             case 0x8A:
                 this.a = this.x;
+                this.updateNZFlags(this.a);
                 break;
             // DEX
             case 0xCA:
@@ -960,10 +976,12 @@ public class CPU {
             // TAY
             case 0xA8:
                 this.y = this.a;
+                this.updateNZFlags(this.a);
                 break;
             // TYA
             case 0x98:
                 this.a = this.y;
+                this.updateNZFlags(this.a);
                 break;
             // DEY
             case 0x88:
@@ -1446,6 +1464,7 @@ public class CPU {
         register &= 0xFF;
         value &= 0xFF;
 
+        // clear all flags first
         this.clearFlags();
 
         if (register == value) {

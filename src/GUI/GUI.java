@@ -38,6 +38,7 @@ import javafx.stage.Stage;
 // Other JDK packages
 import javax.swing.text.Position;
 import java.io.File;
+import java.util.Random;
 
 public class GUI extends Application {
     /*
@@ -64,6 +65,7 @@ public class GUI extends Application {
 
     private DrawGraphics gDrawer;
 
+    private TextArea memoryMonitor;
     private TextArea registerMonitor;
     private TextArea userConsole;
 
@@ -245,16 +247,23 @@ public class GUI extends Application {
         VBox outer = new VBox(menuBar);
         HBox hbox = new HBox();
         hbox.setSpacing(10);
+
         VBox leftCol = new VBox();
         leftCol.setSpacing(10);
         leftCol.setPadding(new Insets(10, 10, 10, 10));
+
+        HBox memoryArea = new HBox();
+        memoryArea.setSpacing(20);
+        memoryArea.setPadding(new Insets(10, 10, 10, 10));
+
         VBox rightCol = new VBox();
         rightCol.setSpacing(10);
         rightCol.setPadding(new Insets(10, 10, 10, 10));
-        outer.getChildren().add(hbox);
+
+        outer.getChildren().addAll(hbox, memoryArea);
         hbox.getChildren().addAll(leftCol, rightCol);
 
-        Scene primaryScene = new Scene(outer, 550, 600);
+        Scene primaryScene = new Scene(outer, 600, 600);
 
         // add the register and status monitor
         registerMonitor = new TextArea();
@@ -271,7 +280,7 @@ public class GUI extends Application {
         // create the information/error console
         userConsole = new TextArea();
         userConsole.setMaxWidth(256);
-        userConsole.setMinHeight(500);
+        userConsole.setMinHeight(512);
         userConsole.setEditable(false); // user cannot edit this textarea
         userConsole.setWrapText(true);  // wrap text when it hits the end of the console
         userConsole.setFont(Font.font("Courier New", FontWeight.NORMAL, 12));
@@ -314,10 +323,24 @@ public class GUI extends Application {
         rightCol.getChildren().add(regMonitorLabel);
         rightCol.getChildren().add(registerMonitor);
 
+        /*
+
+        Memory Monitor
+
+         */
+
+        memoryMonitor = new TextArea();
+        memoryMonitor.setMinWidth(530);
+        memoryMonitor.setMinHeight(256);
+        memoryMonitor.setEditable(false);
+        memoryMonitor.setFont(Font.font("Courier New", FontWeight.NORMAL, 12));
+        updateMemoryMonitor(0);
+
+        Label memoryMonitorLabel = new Label("Memory");
+        memoryMonitorLabel.setLabelFor(memoryMonitor);
+
         // When the user clicks on the screen, focus on it
-        this.screen.setOnMouseClicked(mouseEvent -> {
-            this.screen.requestFocus();
-        });
+        this.screen.setOnMouseClicked(mouseEvent -> this.screen.requestFocus());
 
         // If the user presses a key when the screen is in focus, interpret it as an emulated input
         this.screen.setOnKeyPressed(keyEvent -> {
@@ -351,10 +374,11 @@ public class GUI extends Application {
             }
         });
 
-        // fshow the stage
+        // show the stage
         primaryStage.setScene(primaryScene);
         primaryStage.show();
 
+        Random rand = new Random();
         // we will use an animation timer to control CPU speed
         timer = new AnimationTimer() {
             // The animation timer that is responsible for stepping the CPU, updating graphics, etc.
@@ -364,65 +388,70 @@ public class GUI extends Application {
                 // This function will be called _approximately_ 60 times per second
                 // This means, assuming a clock speed of 2MHz and an average of 4 cycles per instruction, we can execute 8k instructions
 
-                // NMI will be disabled when the CPU is paused for debugging
-                if (emu.debugger.isPaused())
-                    this.stop();
-
-                if (now - lastNMI > 33_333_333) {
-                    lastNMI = System.nanoTime();
-                    emu.nmi();
-                }
-
-                // begin the thread
-                Thread drawerThread = new Thread(gDrawer);
-                drawerThread.start();
-
-                // execute our instructions
-                int i = 0;
-                if (emu.isDebugMode()) {
-                    while (!emu.debugger.isPaused() && emu.isRunning() && i < INSTRUCTIONS_PER_FRAME) {
-                        try {
-                            emu.debugger.step();
-                            i++;
-                        } catch (Exception e) {
-                            emu.debugger.terminate();
-                            System.out.println("Exception caught: " + e.getMessage());
-                        }
-                    }
-                } else {
-                    while (emu.isRunning() && i < INSTRUCTIONS_PER_FRAME) {
-                        try {
-                            emu.step();
-                            i++;
-                        } catch (Exception e) {
-                            System.out.println("Exception caught: " + e.getMessage());
-                        }
-                    }
-                }
-
-                if (!emu.isRunning()) {
-                    this.stop();
-                    userConsole.appendText("Done.\n");
-
-                    if (genCoreDumpProperty.get()) {
-                        try {
-                            emu.coreDump();
-                        } catch (Exception e) {
-                            System.out.println(e.getMessage());
-                        }
-                    }
-                }
-
-                // wait for the draw thread to finish
                 try {
+                    // NMI will be disabled when the CPU is paused for debugging
+                    if (emu.debugger.isPaused())
+                        this.stop();
+
+                    if (now - lastNMI > 33_333_333) {
+                        lastNMI = System.nanoTime();
+                        emu.nmi();
+                    }
+
+                    // begin the thread
+                    Thread drawerThread = new Thread(gDrawer);
+                    drawerThread.start();
+
+                    // execute our instructions
+                    int i = 0;
+                    if (emu.isDebugMode()) {
+                        while (!emu.debugger.isPaused() && emu.isRunning() && i < INSTRUCTIONS_PER_FRAME) {
+                            try {
+                                emu.writeToMemory(0xff, (byte) rand.nextInt(256));
+                                emu.debugger.step();
+                                i++;
+                            } catch (Exception e) {
+                                emu.debugger.terminate();
+                                System.out.println("Exception caught: " + e.getMessage());
+                            }
+                        }
+                    } else {
+                        while (emu.isRunning() && i < INSTRUCTIONS_PER_FRAME) {
+                            try {
+                                emu.writeToMemory(0xff, (byte) rand.nextInt(256));
+                                emu.step();
+                                i++;
+                            } catch (Exception e) {
+                                System.out.println("Exception caught: " + e.getMessage());
+                            }
+                        }
+                    }
+
+                    if (!emu.isRunning()) {
+                        this.stop();
+                        userConsole.appendText("Done.\n");
+
+                        if (genCoreDumpProperty.get()) {
+                            try {
+                                emu.coreDump();
+                            } catch (Exception e) {
+                                System.out.println(e.getMessage());
+                            }
+                        }
+                    }
+
+                    updateMemoryMonitor(0); // todo: get page from user
+
+                    // wait for the draw thread to finish
                     drawerThread.join();
+
+                    // update our CPU monitor
+                    updateCPUMonitor();
                 } catch (InterruptedException e) {
                     System.out.println("Interrupted. " + e.getMessage());
                     this.stop();
+                    emu.terminate();
                 }
-
-                // update our CPU monitor
-                updateCPUMonitor();
             }
         };
     }
@@ -528,6 +557,18 @@ public class GUI extends Application {
         inputStage.show();
     }
 
+    private void showMemoryMonitor() {
+        Stage memStage = new Stage();
+        memStage.setTitle("Memory Monitor");
+        HBox hbox = new HBox(20);
+        hbox.setPadding(new Insets(10, 10, 10,10));
+        hbox.getChildren().add(memoryMonitor);
+
+        Scene memScene = new Scene(hbox, 600, 300);
+        memStage.setScene(memScene);
+        memStage.show();
+    }
+
     private void displayDebugPanel() {
         // Displays the program debugger
         Stage debugStage = new Stage();
@@ -604,6 +645,7 @@ public class GUI extends Application {
                 try {
                     emu.debugger.step();
                     updateCPUMonitor();
+                    updateMemoryMonitor(0); // todo: update for page
                 } catch (Exception e) {
                     emu.terminate();
                     userConsole.appendText("Error encountered: " + e.getMessage() + "\n");
@@ -652,6 +694,7 @@ public class GUI extends Application {
         grid.add(updateGraphicsButton, 5, 6, 2, 1);
 
         updateGraphicsButton.setOnAction(actionEvent -> {
+            updateCPUMonitor();
             Thread drawThread = new Thread(gDrawer);
             drawThread.start();
         });
@@ -805,6 +848,29 @@ public class GUI extends Application {
         screenContext.fillRect(0, 0, screenWidth * pxWidth, screenWidth * pxHeight);
     }
 
+    private void updateMemoryMonitor(int page) {
+        if (page > 255)
+            page = 255;
+
+        byte[] memory = emu.getMemory();
+
+        memoryMonitor.clear();
+        for (int i = 0; i < 16; i++) {
+            memoryMonitor.appendText(
+                    String.format("$%04x: ", ((page * 256) + (i * 16)) & 0xFFFF)
+            );
+
+            for (int j = 0; j < 16; j++) {
+                int val = memory[(page * 256) + (i * 16) + j] & 0xFF;
+                memoryMonitor.appendText(
+                        String.format("$%02x ", val)
+                );
+            }
+
+            memoryMonitor.appendText("\n");
+        }
+    }
+
     private void updateCPUMonitor() {
         /*
         Updates the text in the CPU monitor
@@ -930,7 +996,6 @@ public class GUI extends Application {
         asmOption.setOnAction(actionEvent -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.getExtensionFilters().addAll(
-                    new FileChooser.ExtensionFilter("All files", "*.*"),
                     new FileChooser.ExtensionFilter("Assembly Files", "*.s", "*.S", "*.asm")
             );
             File asmFile = fileChooser.showOpenDialog(stage);
@@ -1033,9 +1098,10 @@ public class GUI extends Application {
         MenuItem debuggerPanelOption = new MenuItem("Open Debugger Panel");
         MenuItem addBreakpointOption = new MenuItem("Add Breakpoint...");
         MenuItem removeBreakpointOption = new MenuItem("Delete Breakpoint...");
+        MenuItem displayMemoryMonitorOption = new MenuItem("Memory Monitor");
         CheckMenuItem enableDebugMode = new CheckMenuItem("Enable Debug Mode");
         debugMenu.getItems().addAll(debugOption, debuggerPanelOption, new SeparatorMenuItem(), addBreakpointOption,
-                removeBreakpointOption, new SeparatorMenuItem(), enableDebugMode);
+                removeBreakpointOption, new SeparatorMenuItem(), displayMemoryMonitorOption, new SeparatorMenuItem(), enableDebugMode);
 
         debugOption.setOnAction(actionEvent -> {
             // Run a program in debug mode
@@ -1062,6 +1128,8 @@ public class GUI extends Application {
             // Remove a breakpoint using the breakpoint dialog
             deleteBreakpointDialog();
         });
+
+        displayMemoryMonitorOption.setOnAction(actionEvent -> showMemoryMonitor());
 
         enableDebugMode.setOnAction(actionEvent -> {
             emu.setDebugMode(enableDebugMode.selectedProperty().get());
