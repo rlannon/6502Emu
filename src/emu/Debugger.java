@@ -124,11 +124,6 @@ public class Debugger {
         return this.paused;
     }
 
-    boolean hasHalted() {
-        // tells us whether the CPU program has terminated
-        return this.cpu.halted;
-    }
-
     public void step() throws Exception {
         // steps the CPU one time; if a breakpoint is encountered, pauses
 

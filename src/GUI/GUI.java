@@ -197,9 +197,16 @@ public class GUI extends Application {
 
         try {
             emu.debugger.jump(getAddress(type,data));
+            this.updateCPUMonitor();
         } catch (Exception e) {
             errorAlert("Could not set PC", e.getMessage());
         }
+    }
+
+    private void pause() {
+        // Pause CPU execution through the debugger
+        this.emu.debugger.pause();
+        this.userConsole.appendText("Paused.\n");
     }
 
     private void resume() {
@@ -392,6 +399,7 @@ public class GUI extends Application {
                     if (emu.debugger.isPaused())
                         this.stop();
 
+                    // trigger an NMI every other frame (30 Hz)
                     if (now - lastNMI > 33_333_333) {
                         lastNMI = System.nanoTime();
                         emu.nmi();
@@ -406,7 +414,6 @@ public class GUI extends Application {
                     if (emu.isDebugMode()) {
                         while (!emu.debugger.isPaused() && emu.isRunning() && i < INSTRUCTIONS_PER_FRAME) {
                             try {
-                                emu.writeToMemory(0xff, (byte)(Math.random() * 100));
                                 emu.debugger.step();
                                 i++;
                             } catch (Exception e) {
@@ -417,7 +424,6 @@ public class GUI extends Application {
                     } else {
                         while (emu.isRunning() && i < INSTRUCTIONS_PER_FRAME) {
                             try {
-                                emu.writeToMemory(0xff, (byte)(Math.random() * 100));
                                 emu.step();
                                 i++;
                             } catch (Exception e) {
@@ -426,6 +432,7 @@ public class GUI extends Application {
                         }
                     }
 
+                    // If the CPU stops, then stop the timer and write a message to the console
                     if (!emu.isRunning()) {
                         this.stop();
                         userConsole.appendText("Done.\n");
@@ -434,7 +441,7 @@ public class GUI extends Application {
                             try {
                                 emu.coreDump();
                             } catch (Exception e) {
-                                System.out.println(e.getMessage());
+                                System.out.println("Could not generate core dump: " + e.getMessage());
                             }
                         }
                     }
@@ -702,8 +709,7 @@ public class GUI extends Application {
         Button pauseButton = new Button("Pause");
         grid.add(pauseButton, 5, 2, 2, 1);
         pauseButton.setOnAction(actionEvent -> {
-            // pause the CPU via the debugger
-            emu.debugger.pause();
+            this.pause();
         });
 
         // Continue
@@ -886,6 +892,8 @@ public class GUI extends Application {
     }
 
     private void updateMemoryMonitor() {
+        // Updates the memory monitor based on the current page and data in memory
+
         if (monitorPage > 255)
             monitorPage = 255;
 
@@ -910,7 +918,7 @@ public class GUI extends Application {
 
     private void updateCPUMonitor() {
         /*
-        Updates the text in the CPU monitor
+        Updates the text in the CPU monitor to reflect register values
          */
 
         registerMonitor.clear();
@@ -929,7 +937,7 @@ public class GUI extends Application {
     }
 
     private void updateInputsTableView(TableView<Input> inputs) {
-        // now, add our items
+        // Update the inputs table to display all emulator inputs
         inputs.getItems().clear();
         for (Input i: emu.getAllInputs().values()) {
             inputs.getItems().add(i);
@@ -964,6 +972,10 @@ public class GUI extends Application {
         /*
 
         File Menu
+        Options are:
+            - Open emu file ->  Opens a .emu file for execution
+            - Clear console ->  Clears the user console
+            - Exit  ->  Quit the program
 
          */
 
@@ -1013,6 +1025,12 @@ public class GUI extends Application {
         /*
 
         Tools Menu
+        Options are:
+            - Assemble...   ->  Assemble a .s, .S, or .asm file
+            - Disassemble   ->  Disassemble memory at a specified location and display said disassembly
+            - Hexdump   ->  View a hexdump of a given memory location
+            - Generate core dump    ->  Create a core dump on program termination
+            - Configure inputs  ->  Add or remove emulated inputs
 
          */
 
@@ -1076,6 +1094,10 @@ public class GUI extends Application {
         /*
 
         Run Menu
+        Options are:
+            - Run...    ->  Run the program currently loaded into memory
+            - Terminate ->  Terminate the running program
+            - Reset ->  Send the processor a RESET signal
 
          */
 
@@ -1088,10 +1110,13 @@ public class GUI extends Application {
 
         runOption.setOnAction(actionEvent -> {
             // Run program
-            if (genCoreDumpProperty.get()) {
+            if (!emu.isDebugMode()) {
                 errorAlert("Cannot generate core dump", "You must be in debug mode to generate core dumps");
+                genCoreDumpProperty.set(false);
+            } else if (genCoreDumpProperty.get()) {
+                emu.debugger.setGenCoreDump(true);
             }
-            emu.setDebugMode(false);
+
             emu.reset();
             resume();
         });
@@ -1127,6 +1152,10 @@ public class GUI extends Application {
         /*
 
         Debug Menu
+        Options are:
+            - Debug...  ->  Run the program in debug mode
+            - Open debugger panel   ->  Display the debugger panel
+            - Add breakpoint... ->  Adds a breakpoint to the debugger; this will
 
          */
 
