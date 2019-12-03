@@ -31,7 +31,6 @@
 .rs 1 direction ; 1 = up; 2 = down; 4 = right; 8 = left
 .rs 1 snake_length  ; snake length in terms of _bytes of memory_ (so a value of $04 => 4 bytes => 2 pixels)
 .rs 1 input     ; the last fetched input from the user
-.rs 1 draw_ready    ; whether we are ready to draw
 .rs 1 draw_done ; whether we have finished drawing
 
 .rs 1 frame_count   ; track the number of frames that have passed since it was last cleared
@@ -61,8 +60,6 @@ gameloop:
     jsr check_collision ; check for a collision with the snake and the apple or with the snake and itself
     jsr update_snake    ; update the snake
     jsr draw_apple
-    lda #$01
-    sta draw_ready
 
     ; finally, set our draw_done flag to 0
     ; this indicates to our loop that we shouldn't run until the next graphics update is finished
@@ -397,7 +394,6 @@ RESET:
     ; clear our frame count
     lda #$03
     sta frame_count
-    sta draw_ready
 
     cli     ; clear the interrupt flag, as it is set on system reset
     JMP gameloop    ; go to our game loop
