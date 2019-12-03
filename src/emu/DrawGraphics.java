@@ -1,10 +1,9 @@
 package emu;
 
-import GUI.GUI;
+import gui.GUI;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
-import javafx.stage.Stage;
 
 public class DrawGraphics implements Runnable {
     /*

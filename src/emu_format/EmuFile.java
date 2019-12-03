@@ -4,7 +4,6 @@ import assembler.DebugSymbol;
 import emu.Input;
 
 import java.io.*;
-import java.util.Arrays;
 import java.util.Vector;
 
 public class EmuFile {

@@ -1,4 +1,4 @@
-package GUI;
+package gui;
 
 // custom packages
 import assembler.Status;
@@ -24,7 +24,6 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -36,9 +35,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 // Other JDK packages
-import javax.swing.text.Position;
 import java.io.File;
-import java.util.Random;
 
 public class GUI extends Application {
     /*
@@ -673,7 +670,7 @@ public class GUI extends Application {
         grid.add(stepButton, 5, 1, 2, 1);
 
         stepButton.setOnAction(actionEvent -> {
-            if (emu.isDebugMode() && emu.debugger.isPaused()) {
+            if (emu.debugger.isPaused()) {
                 try {
                     emu.debugger.step();
                     updateCPUMonitor();
@@ -688,9 +685,30 @@ public class GUI extends Application {
             }
         });
 
+        // Jump
+        Button jumpButton = new Button("Set PC...");
+        grid.add(jumpButton, 7, 1, 2, 1);
+        jumpButton.setOnAction(actionEvent -> {
+            String[] values = getAddressDataDialog("Select Address");
+            try {
+                if (values[1] != null)
+                    jump(values[0], values[1]); // todo: if alert is displayed, keep dialog open?
+            } catch (Exception e) {
+                errorAlert("Could not set PC", "You must enter a valid value");
+            }
+        });
+
+        // Pause
+        Button pauseButton = new Button("Pause");
+        grid.add(pauseButton, 5, 2, 2, 1);
+        pauseButton.setOnAction(actionEvent -> {
+            // pause the CPU via the debugger
+            emu.debugger.pause();
+        });
+
         // Continue
         Button continueButton = new Button("Continue");
-        grid.add(continueButton, 5, 2, 2, 1);
+        grid.add(continueButton, 5, 3, 2, 1);
 
         continueButton.setOnAction(actionEvent -> {
             // we need to step once before we can resume
@@ -702,19 +720,6 @@ public class GUI extends Application {
             }
         });
 
-        // Jump
-        Button jumpButton = new Button("Set PC...");
-        grid.add(jumpButton, 5, 3, 2, 1);
-        jumpButton.setOnAction(actionEvent -> {
-            String[] values = getAddressDataDialog("Select Address");
-            try {
-                if (values[1] != null)
-                    jump(values[0], values[1]); // todo: if alert is displayed, keep dialog open?
-            } catch (Exception e) {
-                errorAlert("Could not set PC", "You must enter a valid value");
-            }
-        });
-
         // Trigger NMI, graphics update buttons
         Button triggerNMIButton = new Button("Trigger NMI");
         grid.add(triggerNMIButton, 5, 5, 2, 1);
@@ -723,7 +728,7 @@ public class GUI extends Application {
 
         // We should also have a button that triggers a graphics update, since the timer is disabled when debugging
         Button updateGraphicsButton = new Button("Update Graphics");
-        grid.add(updateGraphicsButton, 5, 6, 2, 1);
+        grid.add(updateGraphicsButton, 7, 5, 2, 1);
 
         updateGraphicsButton.setOnAction(actionEvent -> {
             updateCPUMonitor();
