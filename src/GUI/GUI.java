@@ -1154,7 +1154,7 @@ public class GUI extends Application {
 
         runOption.setOnAction(actionEvent -> {
             // Run program
-            if (!emu.isDebugMode()) {
+            if (!emu.isDebugMode() && genCoreDumpProperty.get()) {
                 errorAlert("Cannot generate core dump", "You must be in debug mode to generate core dumps");
                 genCoreDumpProperty.set(false);
             } else if (genCoreDumpProperty.get()) {
