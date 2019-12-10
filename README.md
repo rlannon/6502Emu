@@ -1,14 +1,14 @@
 # 6502Emu
 
-A simple 6502 emulator / development kit, written in Java.
+A simple 6502 emulator and development kit, written in Java.
 
 ## Getting Started
 
-Simply compile and run in your JVM. The access specifiers have not been entirely worked out yet, as the app's user interface has not been designed yet. These access specifiers may change over time in order to reflect the final architecture of the application.
+Simply compile and run in your JVM. Note that because JavaFX is used for the user interface, it cannot be compiled to a ```.jar``` file (or at least not easily).
 
 ## Features
 
-This project is intended to be a simple development kit for the 6502. While it may eventually lead to an NES emulator (or something similar), it currently has no other hardware emulation.
+This project is intended to be a simple development kit for the 6502. While it may eventually lead to an NES emulator (or something similar), it currently has very limited hardware emulation capabilities which are not nearly as complex or powerful as an NES emulator might.
 
 ### Assembler
 
@@ -22,7 +22,7 @@ The assembly syntax and conventions I use are fairly standard:
   * ```.rsset <address>``` - Sets the address that should be used for the ```.rs``` directive
   * ```.macro <name> <value>``` - Defines a macro; all references to it in the code will be replaced with the macro's value
   * ```.db <bytes>``` or ```.byte <bytes>``` - Defines a series of bytes in program memory
-  * ```.dw <words>``` or ```.word <words>``` - Defines a series of words in program memory
+  * ```.dw <words>``` or ```.word <words>``` - Defines a series of words. Note you should not define them in little endian format, the assembler will do it automatically
 * Labels may contain:
   * letters
   * numbers, though they may not begin with a number
@@ -31,12 +31,24 @@ The assembly syntax and conventions I use are fairly standard:
 
 ### EMU Files
 
-Both the assembler and CPU utilize ```.emu``` files which contain program and debug information. These files indicate program and segment data as well as line numbers and their corresponding addresses. This will allow the debugger to set breakpoints.
+Both the assembler and CPU utilize ```.emu``` files which contain program and debug information. These files indicate program and segment data as well as line numbers and their corresponding addresses. The format also notes the addresses of program labels. These features allow the debugger to set breakpoints at addresses, line numbers, or labels.
 
 ### CPU
 
-The CPU is the [MOS 6502](https://en.wikipedia.org/wiki/MOS_Technology_6502), in case you haven't guessed already. Note that currently, interrupts are not supported as there is no hardware emulation.
+The CPU is the [MOS 6502](https://en.wikipedia.org/wiki/MOS_Technology_6502), in case you haven't guessed already.
+
+#### Emulated Hardware
+
+This project allows for limited hardware emulation capabilities.
+
+##### Screen
+
+There is a 32x32 emulated screen between memory locations ```$2400``` and ```$27FF```. Information about said output can be found in ```src/GUI/Emulated Inputs and Outputs```. The screen generates an NMI 1 millisecond before each update, which occurs at a framerate of *approximately* 30Hz. A Java animation timer and concurrency are both used to accomplish this.
+
+##### Inputs
+
+The user may also configure emulated inputs. The user may choose from individual keys or from the keyboard as a whole; if the latter is chosen, it overrides all other inputs that are configured. Inputs may be mapped to a memory address and the user may choose whether they should trigger an IRQ.
 
 ### Debugger
 
-The emulator comes with a simple debugger for setting breakpoints and monitoring CPU status.
+The emulator comes with a simple debugger for debugging programs. The debugger allows the user to set breakpoints, step through program execution, trigger NMIs and graphics updates, set the program counter, and monitor memory. The project also comes with a simple disassembler that allows users to examine program memory and instructions during debugging.
