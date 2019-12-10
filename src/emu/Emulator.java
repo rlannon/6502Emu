@@ -1,5 +1,6 @@
 package emu;
 
+import assembler.Disassembler;
 import gui.GUI;
 import assembler.Assembler;
 import emu_format.EmuFile;
@@ -24,6 +25,30 @@ public class Emulator {
     public void assemble(String inputFilename, String outputFilename) throws Exception {
         // Assemble a file
         this.assemble.assemble(inputFilename, outputFilename);
+    }
+
+    public ArrayList<String> disassemble(int startAddress) throws Exception {
+        /*
+        disassembly
+        Disassembles code in memory starting at the specified address
+
+        Disassembles 1 page of data starting at startAddress, or until end of program memory.
+        The output strings are individual lines formatted as follows:
+            $<address>:   $<opcode> <operand>   <mnemonic> <operands>
+
+        @param  startAddress    The address where we should start disassembly
+        @return A string array containing the disassembly
+         */
+
+        ArrayList<String> disassembly = new ArrayList<>();
+
+        if (startAddress < 0 || startAddress > 0xFFFF) {
+            throw new Exception("Start address out of range");
+        } else {
+            disassembly = Disassembler.disassemble(startAddress, this.getMemory());
+        }
+
+        return disassembly;
     }
 
     public void addBinary(String filename) throws Exception {

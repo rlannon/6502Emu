@@ -111,6 +111,7 @@ class InstructionParser {
     }
 
     static byte getOpcode(String mnemonic, int addressingMode) throws Exception {
+        // Gets the opcode for the instruction
         boolean found = false;
         int i = 0;
         mnemonic = mnemonic.toUpperCase();
@@ -138,6 +139,7 @@ class InstructionParser {
     }
 
     static Pair<String, Integer> getMnemonic(byte opcode) throws Exception {
+        // Gets the mnemonic and addressing mode of the instruction with a given opcode
         boolean found = false;
         int i = 0, j = 0;
         while (i < OPCODES.length && !found) {

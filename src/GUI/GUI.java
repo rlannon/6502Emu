@@ -36,6 +36,7 @@ import javafx.stage.Stage;
 
 // Other JDK packages
 import java.io.File;
+import java.util.ArrayList;
 
 public class GUI extends Application {
     /*
@@ -232,8 +233,6 @@ public class GUI extends Application {
 
         launch(args);
     }
-
-    // todo: allow user to select page number for memory monitor
 
     @Override
     public void start(Stage primaryStage) {
@@ -562,6 +561,52 @@ public class GUI extends Application {
         });
 
         inputStage.show();
+    }
+
+    private void disassembly() {
+        // Display a dialog for our disassembly
+
+        Stage disAsmStage = new Stage();
+        String[] addrData = getAddressDataDialog("Disassembly");
+        int address;
+
+        try {
+            address = getAddress(addrData[0], addrData[1]);
+            if (address < 0 || address > 0xFFFF)
+                throw new Exception("Address out of range");
+        } catch (Exception e) {
+            errorAlert("Invalid address", e.getMessage());
+            return;
+        }
+
+        // Create the scene
+        HBox hbox = new HBox();
+        hbox.setMinHeight(500);
+        Scene disAsmScene = new Scene(hbox);
+
+        // Create the textarea to hold the disassembly
+        TextArea textArea = new TextArea();
+        textArea.setMinWidth(350);
+        textArea.setFont(Font.font("Courier new", FontWeight.NORMAL, 12));
+        textArea.setEditable(false);
+
+        hbox.getChildren().add(textArea);
+
+        try {
+            // Perform the disassembly and populate the textarea
+            ArrayList<String> disAsmData = emu.disassemble(address);
+            for (String line: disAsmData) {
+                textArea.appendText(line + "\n");
+            }
+        } catch (Exception e) {
+            errorAlert("Disassembly Failed", e.getMessage());
+            return;
+        }
+
+        // create the scene
+        disAsmStage.setScene(disAsmScene);
+        disAsmStage.setTitle("Disassembly");
+        disAsmStage.show();
     }
 
     private void showMemoryMonitor() {
@@ -1071,8 +1116,7 @@ public class GUI extends Application {
         });
 
         disassembleOption.setOnAction(actionEvent -> {
-            // todo: disassembly
-            System.out.println("Disassembly not yet implemented");
+            disassembly();
         });
 
         hexdumpOption.setOnAction(actionEvent -> {
