@@ -505,7 +505,7 @@ public class CPU {
                 this.compare(this.a, this.fetchIndirectX());
                 break;
             // Indirect, Y
-            case 0xC2:
+            case 0xD1:
                 this.compare(this.a, this.fetchIndirectY());
                 break;
 
@@ -1309,6 +1309,69 @@ public class CPU {
             case 0x8c:
                 address = (int)this.fetchImmediateShort() & 0xFFFF;
                 this.storeInMemory(this.y, address);
+                break;
+
+            /*
+
+            Unofficial opcodes that we support go here
+
+             */
+
+            // Put all of our 2-byte NOPs here; not all can be assembled/disassembled
+            case 0x80:
+            case 0x89:
+            case 0x04:
+            case 0x44:
+            case 0x64:
+            case 0x14:
+            case 0x34:
+            case 0x54:
+            case 0x74:
+            case 0xd4:
+            case 0xf4:
+            case 0x82:
+            case 0xc2:
+            case 0xe2:
+                this.fetchImmediateByte();  // ignore the value
+                break;
+
+            // we also have a few 3-byte nops
+            case 0x0c:
+            case 0x1c:
+            case 0x3c:
+            case 0x5c:
+            case 0x7c:
+            case 0xdc:
+            case 0xfc:
+                this.fetchImmediateShort(); // ignore the value again
+                break;
+
+            /*
+
+            LAX
+            LAX performs an LDA and then a TAX
+
+             */
+            // LAX: ZP
+            case 0xa7:
+            // LAX: ZP, Y
+            case 0xb7:
+                // get the address and read it from the zero page
+                address = (int)this.fetchImmediateByte() & 0xFF;
+                this.a = this.fetchByteFromMemory(address, opcode == 0xa7 ? 0 : this.y);
+                this.x = this.a;
+                this.updateNZFlags(this.x);
+                break;
+            // LAX: Abs
+            case 0xaf:
+            // LAX: Abs, Y
+            case 0xbf:
+                break;
+            // LAX: Indirect X
+            case 0xa3:
+                break;
+            // LAX: Indirect Y
+            case 0xb3:
                 break;
 
             // Invalid opcodes will fall through to here
