@@ -150,28 +150,40 @@ public class CPU {
         }
     }
 
-    private byte fetchIndirectX() {
-        // Handle an indexed indirect ($c0, x) fetch
-        // Looks at location $c0, x; obtains data and uses that (and the following byte) as the address
+    private int calculateIndexedIndirectAddress() {
+        // Calculate the address for the (zp, x) mode
+        // For the operation ($c0, x),
+        // we look at location $c0, x; obtain data, and use that (and the following byte) as the address
 
         int pointer = this.fetchImmediateByte() & 0xFF;   // fetch the pointer value
         pointer += this.x & 0xFF;   // add the offset before fetching the actual address
 
         int addressLow = this.memory[pointer] & 0xFF;
         int addressHigh = this.memory[pointer + 1] & 0xFF;
-        int address = ((addressHigh << 8) | addressLow) & 0xFFFF;
-        return this.memory[address];
+        return ((addressHigh << 8) | addressLow) & 0xFFFF;
     }
 
-    private byte fetchIndirectY() {
-        // Handle an indirect indexed ($c0), y fetch
-        // Looks at location $c0; goes to that location + y; gets that value
+    private int calculateIndirectIndexedAddress() {
+        // Calculate the indirect address for the (zp), y mode
+        // For example, for the operation ($c0), y, we look at location $c0; go to that location + y
 
         int pointer = this.fetchImmediateByte() & 0xFF;   // fetch the pointer
         int addressLow = (this.memory[pointer]) & 0xFF;
         int addressHigh = (this.memory[pointer + 1]) & 0xFF;
         int address = ((addressHigh << 8) | addressLow) & 0xFFFF;
         address += this.y & 0xFF;
+        return address;
+    }
+
+    private byte fetchIndirectX() {
+        // Handle an indexed indirect ($c0, x) fetch
+        int address = this.calculateIndexedIndirectAddress();
+        return this.memory[address];
+    }
+
+    private byte fetchIndirectY() {
+        // Handle an indirect indexed ($c0), y fetch
+        int address = this.calculateIndirectIndexedAddress();
         return this.memory[address];    // get the value at that address
     }
 
@@ -203,7 +215,18 @@ public class CPU {
         this.debugger.addUsedPageByAddress(address);
     }
 
-    // todo: implement store instruction functionality
+    private void storeIndirectY(byte value) {
+        // Stores the byte at an indirect location
+        int address = this.calculateIndirectIndexedAddress();
+        this.memory[address] = value;
+    }
+
+    private void storeIndirectX(byte value) {
+        // Stores the byte at an indirect location
+        int address = this.calculateIndexedIndirectAddress();
+        this.memory[address] = value;
+    }
+
     // todo: track which pages have been touched if we are in debug mode
 
     // Program execution
@@ -872,25 +895,7 @@ public class CPU {
 
             // LSR: Accumulator
             case 0x4A:
-                boolean carry = (this.a & 0x01) == 1;
-                this.a >>= 1;   // shift right by one bit
-                this.a &= 0x7F; // ensure bit 7 is 0
-
-                // Set/clear the C flag depending on bit
-                if (carry)
-                    this.setFlag(Status.CARRY);
-                else
-                    this.clearFlag(Status.CARRY);
-
-                // clear the N flag
-                this.clearFlag(Status.NEGATIVE);
-
-                // set or clear the Z flag
-                if (this.a == 0)
-                    this.setFlag(Status.ZERO);
-                else
-                    this.clearFlag(Status.ZERO);
-
+                this.shiftRight();
                 break;
             // LSR: Zero Page
             // LSR: Zero Page, X
@@ -1200,29 +1205,11 @@ public class CPU {
                 break;
             // STA: Indirect X
             case 0x81:
-                // Handle an indexed indirect ($c0, x) fetch
-                // Looks at location $c0, x; obtains data and uses that (and the following byte) as the address
-                pointer = this.fetchImmediateByte() & 0xFF;   // fetch the address
-                pointer += this.x & 0xFF;
-
-                addressLow = this.memory[pointer] & 0xFF;
-                addressHigh = this.memory[pointer + 1] & 0xFF;
-                address = ((addressHigh << 8) | addressLow) & 0xFFFF;
-
-                // pointer is at location base + index
-                this.memory[address] = this.a;
+                this.storeIndirectX(this.a);
                 break;
             // STA: Indirect Y
             case 0x91:
-                // Handle an indirect indexed ($c0), y fetch
-                // Looks at location $c0; goes to that location + y; gets that value
-
-                pointer = this.fetchImmediateByte() & 0xFF;   // fetch the pointer
-                addressLow = this.memory[pointer] & 0xFF;
-                addressHigh = this.memory[pointer + 1] & 0xFF;
-                address = ((addressHigh << 8) | addressLow) & 0xFFFF;
-                address += this.y & 0xFF;
-                this.memory[address] = this.a;
+                this.storeIndirectY(this.a);
                 break;
 
             /*
@@ -1366,12 +1353,80 @@ public class CPU {
             case 0xaf:
             // LAX: Abs, Y
             case 0xbf:
+                address = (int)this.fetchImmediateShort() & 0xFFFF;
+                this.a = this.fetchByteFromMemory(address, opcode == 0xaf ? 0 : this.y);
+                this.x = this.a;
+                this.updateNZFlags(this.x);
                 break;
             // LAX: Indirect X
             case 0xa3:
+                this.a = this.fetchIndirectX();
+                this.x = this.a;
+                this.updateNZFlags(this.x);
                 break;
             // LAX: Indirect Y
             case 0xb3:
+                this.a = this.fetchIndirectY();
+                this.x = this.a;
+                this.updateNZFlags(this.x);
+                break;
+
+            // SAX performs a bitwise AND on A and X and stores the result in memory
+            // Affects no flags
+            // SAX: zp
+            case 0x87:
+            // SAX: zp, y
+            case 0x97: {
+                address = (int) this.fetchImmediateByte() & 0xFF;
+                byte result = (byte)(this.a & this.x & 0xFF);
+                this.storeInMemory(result, address, opcode == 0x87? 0 : this.y);
+                break;
+            }
+            // SAX: abs
+            case 0x8f: {
+                address = (int)this.fetchImmediateShort() & 0xFFFF;
+                byte result = (byte)(this.a & this.x & 0xFF);
+                this.storeInMemory(result, address);
+                break;
+            }
+            // SAX: ind y
+            case 0x83: {
+                byte value = (byte)(this.a & this.x & 0xFF);
+                this.storeIndirectY(value);
+                break;
+            }
+
+            // ALR: imm
+            case 0x4b:
+                // ALR is the equivalent of an AND #imm and then LSR A
+                this.and(this.fetchImmediateByte());
+                this.shiftRight();
+                break;
+
+            // ANC: imm
+            case 0x0b: {
+                // ANC performs and AND imm and then copies the N flag to C
+                this.and(this.fetchImmediateByte());
+                boolean n = this.isSet(Status.NEGATIVE);
+                if (n)
+                    this.setFlag(Status.CARRY);
+                else
+                    this.clearFlag(Status.CARRY);
+                break;
+            }
+
+            // ARR: imm
+            case 0x6b:
+                // Similar to AND #imm; ROR A
+                // todo: apparently this sets C and V differently, but I haven't verified this
+                this.and(this.fetchImmediateByte());
+
+                // rotate
+                boolean carry = this.isSet(Status.CARRY);
+                this.shiftRight();
+                if (carry)
+                    this.a |= 0x80;
+
                 break;
 
             // Invalid opcodes will fall through to here
@@ -1465,6 +1520,31 @@ public class CPU {
         operand &= 0xFF;
         this.a ^= operand;
         this.updateNZFlags(this.a);
+    }
+
+    private void shiftRight() {
+        // Shifts the accumulator left one
+
+        boolean carry = (this.a & 0x01) == 1;
+        this.a >>= 1;   // shift right by one bit
+        this.a &= 0x7F; // ensure bit 7 is 0
+
+        // Set/clear the C flag depending on bit
+        if (carry)
+            this.setFlag(Status.CARRY);
+        else
+            this.clearFlag(Status.CARRY);
+
+        // clear the N flag
+        this.clearFlag(Status.NEGATIVE);
+
+        // set or clear the Z flag
+        if (this.a == 0)
+            this.setFlag(Status.ZERO);
+        else
+            this.clearFlag(Status.ZERO);
+
+        return;
     }
 
     private void shiftLeft(int address) {
