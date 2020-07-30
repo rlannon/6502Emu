@@ -230,6 +230,9 @@ public class Assembler {
         // open the input file
         this.asmIn = new FileReader(inputFilename);
 
+        // reset our assembler members
+        this.reset();
+
         // assemble the file
         this.lineNumber = 1;
         System.out.println("Assembling file...");
@@ -642,9 +645,8 @@ public class Assembler {
 
      */
 
-    public Assembler() {
-        // default constructor
-        this.asmIn = null;
+    private void reset() {
+        // resets the assembler
         this.currentOffset = 0;
         this.debugSymbols = new Vector<>();
         this.symbolTable = new Hashtable<>();
@@ -654,5 +656,11 @@ public class Assembler {
         this.lineNumber = 0;
         this.rsAddress = (short)0x0200;  // default rs origin is 0x0200
         this.banks = new Vector<>();
+    }
+
+    public Assembler() {
+        // default constructor
+        this.asmIn = null;
+        this.reset();
     }
 }
