@@ -11,7 +11,11 @@ class InstructionParser {
     private static final String INDIRECT_X_PATTERN = "(\\([a-zA-Z_][0-9a-zA-Z_]+,)|(\\(\\$[0-fF][0-fF],)"; // must be followed by "X)"
 
     private static final Instruction[] OPCODES = {
-            /* Immediate, Zero, ZeroX, ZeroY, Absolute, AbsoluteX, AbsoluteY, Indirect, IndirectX, IndirectY, Single, Relative */
+            /*
+             * Implements some unofficial addressing modes and opcodes
+             */
+
+            /* Immediate, Zero, ZeroX, ZeroY, Absolute, AbsoluteX, AbsoluteY, Indirect, IndirectX, IndirectY, Implied, Relative */
             new Instruction("ADC", new byte[]{0x069, 0x65, 0x75, (byte)0xFF, 0x6d, 0x7d, 0x79, (byte)0xFF, 0x61, 0x71, (byte)0xFF, (byte)0xFF}),
             new Instruction("AND", new byte[]{0x29, 0x25, 0x35, (byte)0xFF, 0x2d, 0x3d, 0x39, (byte)0xFF, 0x21, 0x31, (byte)0xFF, (byte)0xFF}),
             new Instruction("ASL", new byte[]{ (byte)0xFF, 0x06, 0x16, (byte)0xFF, 0x0e, 0x1e, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x0a, (byte)0xFF }),
@@ -44,7 +48,7 @@ class InstructionParser {
             new Instruction("LDX", new byte[]{(byte)0xa2, (byte)0xa6, (byte)0xFF, (byte)0xb6, (byte)0xae, (byte)0xFF, (byte)0xbe, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
             new Instruction("LDY", new byte[]{(byte)0xa0, (byte)0xa4, (byte)0xb4, (byte)0xFF, (byte)0xac, (byte)0xbc, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
             new Instruction("LSR", new byte[]{(byte)0xFF, 0x46, 0x56, (byte)0xFF, 0x4e, 0x5e, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x4a, (byte)0xFF}),
-            new Instruction("NOP", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xea, (byte)0xFF}),
+            new Instruction("NOP", new byte[]{ /* unofficial */ (byte)0x80, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xea, (byte)0xFF}),
             new Instruction("ORA", new byte[]{0x09, 0x05, 0x15, (byte)0xFF, 0x0d, 0x1d, 0x19, (byte)0xFF, 0x01, 0x11, (byte)0xFF, (byte)0xFF}),
             new Instruction("TAX", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xaa, (byte)0xFF}),
             new Instruction("TXA", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0x8a, (byte)0xFF}),
@@ -68,6 +72,9 @@ class InstructionParser {
             new Instruction("PLP", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x28, (byte)0xFF}),
             new Instruction("STX", new byte[]{(byte)0xFF, (byte)0x86, (byte)0xFF, (byte)0x96, (byte)0x8e, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
             new Instruction("STY", new byte[]{(byte)0xFF, (byte)0x84, (byte)0x94, (byte)0xFF, (byte)0x8c, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
+
+            /* Support some unofficial opcodes */
+            new Instruction("LAX", new byte[]{(byte)0xFF, (byte)0xA7, (byte)0xFF, (byte)0xb7, (byte)0xaf, (byte)0xff, (byte)0xbf, (byte)0xff, (byte)0xa3, (byte)0xa3, (byte)0xff, (byte)0xff})
     };
 
     static boolean supportsAddressingMode(String mnemonic, int mode) throws Exception {
@@ -250,7 +257,7 @@ class InstructionParser {
 
         if (data.length == 1)
         {
-            return AddressingMode.Single;
+            return AddressingMode.Implied;
         }
         else
         {
@@ -265,7 +272,7 @@ class InstructionParser {
                 if (data[1].toUpperCase().equals("A"))
                 {
                     // things like 'asl a' use this
-                    return AddressingMode.Single;
+                    return AddressingMode.Implied;
                 }
                 // if the first character is a #, then it's immediate
                 else if (data[1].charAt(0) == '#')
@@ -360,7 +367,7 @@ class InstructionParser {
             throw new Exception("Invalid opcode or addressing mode");
         }
         else {
-            if (addressingMode == AddressingMode.Single) {
+            if (addressingMode == AddressingMode.Implied) {
                 // instruction width 1
                 return new byte[]{opcode};
             } else {
