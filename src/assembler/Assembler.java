@@ -204,7 +204,7 @@ public class Assembler {
                             System.out.println("Warning: must insert a NOP due to symbol resolution for '" +
                                     rSym.getName() + "' on line " + rSym.getLineNumber() + ". A memory optimization can " +
                                     "be performed if the macro is placed before this instruction. Instead, filling empty" +
-                                    "byte with $EA (a NOP)");
+                                    "byte with $EA");
 
                             // modify the opcode and change the address data
                             opcode = InstructionParser.getOpcode(mnemonic, addrMode);
@@ -230,12 +230,11 @@ public class Assembler {
         // open the input file
         this.asmIn = new FileReader(inputFilename);
 
-        // reset our assembler members
+        // reset our assembler members; failing to do so causes erroneous code duplication
         this.reset();
 
         // assemble the file
         this.lineNumber = 1;
-        System.out.println("Assembling file...");
         Scanner asmScan = new Scanner(this.asmIn);
 
         while (asmScan.hasNextLine())
@@ -408,8 +407,6 @@ public class Assembler {
         // now, create an EmuFile
         EmuFile emu = new EmuFile(this.banks, this.debugSymbols);
         emu.writeEmuFile(outputFilename);
-
-        System.out.println("Done.");
     }
 
     /*
@@ -646,21 +643,27 @@ public class Assembler {
      */
 
     private void reset() {
-        // resets the assembler
+        // resets the assembler to allow it to assemble from the start safely
         this.currentOffset = 0;
-        this.debugSymbols = new Vector<>();
-        this.symbolTable = new Hashtable<>();
-        this.relocationTable = new Vector<>();
+        this.debugSymbols.clear();
+        this.banks.clear();
+        this.symbolTable.clear();
+        this.relocationTable.clear();
         this.buffer = new byte[]{};
         this.currentOrigin = (short)0x8000; // default program origin is 0x8000
         this.lineNumber = 0;
         this.rsAddress = (short)0x0200;  // default rs origin is 0x0200
-        this.banks = new Vector<>();
     }
 
     public Assembler() {
         // default constructor
         this.asmIn = null;
+        this.debugSymbols = new Vector<>();
+        this.symbolTable = new Hashtable<>();
+        this.relocationTable = new Vector<>();
+        this.banks = new Vector<>();
+
+        // reset the assembler
         this.reset();
     }
 }
