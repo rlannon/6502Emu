@@ -1,6 +1,6 @@
 package emu;
 
-import gui.GUI;
+import GUI.GUI;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;

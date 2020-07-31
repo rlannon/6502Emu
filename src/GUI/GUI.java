@@ -1,4 +1,4 @@
-package gui;
+package GUI;
 
 // custom packages
 import assembler.Status;
@@ -230,7 +230,8 @@ public class GUI extends Application {
 
     public static void main(String[] args) {
         // launch the program
-
+        // todo: allow .emu files to be opened and run directly by passing them to the program as arguments
+        // todo: allow assembler to be used from command line
         launch(args);
     }
 
@@ -243,7 +244,6 @@ public class GUI extends Application {
          */
 
         // todo: use init/setup functions?
-        // todo: allow .emu files to be opened and run directly by passing them to the program as arguments
 
         primaryStage.setTitle("6502 SDK");
 
@@ -1103,7 +1103,7 @@ public class GUI extends Application {
             if (asmFile != null) {
                 userConsole.appendText("Assembling...\n");
                 try {
-                    String filenameNoExtension = FileExt.getFilenameWithoutExtension(asmFile);
+                    String filenameNoExtension = gui.FileExt.getFilenameWithoutExtension(asmFile);
                     emu.assemble(asmFile.getAbsolutePath(), filenameNoExtension);
                     userConsole.appendText("Done; no errors.\n");
                 } catch (Exception e) {

@@ -1,7 +1,7 @@
 package emu;
 
 import assembler.Disassembler;
-import gui.GUI;
+import GUI.GUI;
 import assembler.Assembler;
 import emu_format.EmuFile;
 
