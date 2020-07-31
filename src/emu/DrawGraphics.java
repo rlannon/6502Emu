@@ -13,13 +13,18 @@ public class DrawGraphics implements Runnable {
 
      */
 
-    private final int BUFFER_MIN = 0x2400;  // the beginning of the graphics buffer
-    private final int BUFFER_LEN = GUI.screenWidth * GUI.screenWidth;    // the length of that buffer
-
     private Thread t;
     private String threadName;
     private byte[] memory;
     private GraphicsContext gc;
+
+    private final static int BUFFER_MIN = 0x2400;
+    private final static int BUFFER_LEN = GUI.screenWidth * GUI.screenWidth;
+    private final static Color[] colors = {
+            Color.BLACK, Color.WHITE, Color.RED, Color.CYAN, Color.PURPLE, Color.GREEN, Color.BLUE,
+            Color.YELLOW, Color.ORANGE, Color.BROWN, Color.PINK, Color.DARKGRAY, Color.GRAY, Color.LIGHTGREEN,
+            Color.LIGHTBLUE, Color.LIGHTGRAY
+    };
 
     public void run() {
         // Executes the graphics drawing thread
@@ -28,61 +33,19 @@ public class DrawGraphics implements Runnable {
             Thread.sleep(1);    // wait 1ms before drawing graphics to allow NMI time to execute
 
             // copy our data to the GUI
+            // the length of that buffer
             for (int i = 0; i < BUFFER_LEN; i++) {
                 // get the color of the pixel based on the value at the address
+                // the beginning of the graphics buffer
                 byte colorByte = this.memory[BUFFER_MIN + i];
                 colorByte &= 0x0F;  // we only care about the low nibble
 
                 Color color;
-                switch (colorByte) {
-                    case 1:
-                        color = Color.WHITE;
-                        break;
-                    case 2:
-                        color = Color.RED;
-                        break;
-                    case 3:
-                        color = Color.CYAN;
-                        break;
-                    case 4:
-                        color = Color.PURPLE;
-                        break;
-                    case 5:
-                        color = Color.GREEN;
-                        break;
-                    case 6:
-                        color = Color.BLUE;
-                        break;
-                    case 7:
-                        color = Color.YELLOW;
-                        break;
-                    case 8:
-                        color = Color.ORANGE;
-                        break;
-                    case 9:
-                        color = Color.BROWN;
-                        break;
-                    case 10:
-                        color = Color.PINK;
-                        break;
-                    case 11:
-                        color = Color.DARKGRAY;
-                        break;
-                    case 12:
-                        color = Color.GRAY;
-                        break;
-                    case 13:
-                        color = Color.LIGHTGREEN;
-                        break;
-                    case 14:
-                        color = Color.LIGHTBLUE;
-                        break;
-                    case 15:
-                        color = Color.LIGHTGRAY;
-                        break;
-                    default:
-                        color = Color.BLACK;
-                        break;
+                if (colorByte < colors.length) {
+                    color = colors[colorByte];
+                }
+                else {
+                    color = Color.BLACK;
                 }
 
                 // now that we have the color, get the coordinate from the address
