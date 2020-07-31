@@ -13,8 +13,6 @@ public class Emulator {
     final int LATCH = 0x2000;   // the latch that tells us whether it's safe to copy memory
     final int NMI_REFRESH = 33;    // an NMI every 33 milliseconds (1/30 of a second)
 
-    private GUI gui;
-
     private CPU cpu;    // the CPU we are running; automatically creates debugger
     public Debugger debugger;
     private Assembler assemble; // the Assembler we are using
@@ -173,17 +171,5 @@ public class Emulator {
 
         this.assemble = new Assembler();
         this.inputs = new HashMap<>();
-
-        this.gui = null;
-    }
-
-    public Emulator(boolean debug) {
-        this();
-        this.debugMode = true;
-    }
-
-    public Emulator(GUI gui) {
-        this();
-        this.gui = gui;
     }
 }

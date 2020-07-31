@@ -1103,7 +1103,7 @@ public class GUI extends Application {
             if (asmFile != null) {
                 userConsole.appendText("Assembling...\n");
                 try {
-                    String filenameNoExtension = gui.FileExt.getFilenameWithoutExtension(asmFile);
+                    String filenameNoExtension = FileExt.getFilenameWithoutExtension(asmFile);
                     emu.assemble(asmFile.getAbsolutePath(), filenameNoExtension);
                     userConsole.appendText("Done; no errors.\n");
                 } catch (Exception e) {
@@ -1249,7 +1249,7 @@ public class GUI extends Application {
     }
 
     public GUI() {
-        this.emu = new Emulator(this);
+        this.emu = new Emulator();
         this.screen = new Canvas(screenWidth * pxWidth, screenWidth * pxHeight);
         this.screenContext = screen.getGraphicsContext2D();
         this.lastNMI = 0;

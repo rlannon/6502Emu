@@ -16,7 +16,7 @@ public class Debugger {
     private boolean genCoreDump;    // whether we should generate a core dump on termination
     private boolean[] pagesUsed;    // tracks which pages have been touched by the CPU
     private ArrayList<Pair<Integer, Integer>> segments;    // tracks where our segments are
-    Hashtable<Integer, Boolean> breakpoints;  // the breakpoints we have set
+    private Hashtable<Integer, Boolean> breakpoints;  // the breakpoints we have set
     private Hashtable<String, Integer> labels; // symbols and their addresses
     private Hashtable<Integer, Integer> lineNumbers;    // line numbers and their addresses
 
@@ -187,9 +187,6 @@ public class Debugger {
     }
 
     // todo: determine whether these fetch functions are really necessary given the emulator is in the package
-    public byte[] getMemory() {
-        return this.cpu.memory;
-    }
 
     public byte getA() {
         return this.cpu.a;
