@@ -1,12 +1,9 @@
 package emu;
 
 import assembler.Disassembler;
-import GUI.GUI;
 import assembler.Assembler;
 import emu_format.EmuFile;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 
 public class Emulator {
@@ -38,7 +35,7 @@ public class Emulator {
         @return A string array containing the disassembly
          */
 
-        ArrayList<String> disassembly = new ArrayList<>();
+        ArrayList<String> disassembly;
 
         if (startAddress < 0 || startAddress > 0xFFFF) {
             throw new Exception("Start address out of range");

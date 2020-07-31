@@ -504,20 +504,12 @@ public class GUI extends Application {
 
         Button bindKeyButton = new Button("Bind Key...");
         bindKeyButton.setDisable(true);
-        bindKeyButton.setOnAction(new EventHandler<>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                bindKeyButton.setOnKeyPressed(new EventHandler<>() {
-                    @Override
-                    public void handle(KeyEvent keyEvent) {
-                        mappedKey.clear();
-                        mappedKey.appendText(keyEvent.getCode().toString());
-                        keyEvent.consume();
-                        grid.requestFocus();
-                    }
-                });
-            }
-        });
+        bindKeyButton.setOnAction(actionEvent -> bindKeyButton.setOnKeyPressed(keyEvent -> {
+            mappedKey.clear();
+            mappedKey.appendText(keyEvent.getCode().toString());
+            keyEvent.consume();
+            grid.requestFocus();
+        }));
 
         grid.add(bindKeyButton, 3, 3, 2, 1);
 
@@ -590,8 +582,6 @@ public class GUI extends Application {
         textArea.setFont(Font.font("Courier new", FontWeight.NORMAL, 12));
         textArea.setEditable(false);
 
-        hbox.getChildren().add(textArea);
-
         try {
             // Perform the disassembly and populate the textarea
             ArrayList<String> disAsmData = emu.disassemble(address);
@@ -603,10 +593,16 @@ public class GUI extends Application {
             return;
         }
 
+        // add the textarea
+        hbox.getChildren().add(textArea);
+
         // create the scene
         disAsmStage.setScene(disAsmScene);
         disAsmStage.setTitle("Disassembly");
         disAsmStage.show();
+
+        // set the scroll to 0
+        textArea.setScrollTop(0);
     }
 
     private void showMemoryMonitor() {
@@ -753,9 +749,7 @@ public class GUI extends Application {
         // Pause
         Button pauseButton = new Button("Pause");
         grid.add(pauseButton, 5, 2, 2, 1);
-        pauseButton.setOnAction(actionEvent -> {
-            this.pause();
-        });
+        pauseButton.setOnAction(actionEvent -> this.pause());
 
         // Continue
         Button continueButton = new Button("Continue");
@@ -1115,18 +1109,14 @@ public class GUI extends Application {
             }
         });
 
-        disassembleOption.setOnAction(actionEvent -> {
-            disassembly();
-        });
+        disassembleOption.setOnAction(actionEvent -> disassembly());
 
         hexdumpOption.setOnAction(actionEvent -> {
             // todo: hexdump
             System.out.println("Hexdump not yet implemented");
         });
 
-        configureInput.setOnAction(actionEvent -> {
-            configureInputsDialog();
-        });
+        configureInput.setOnAction(actionEvent -> configureInputsDialog());
 
         // set our 'genCoreDumpProperty' to be equal to our
         genCoreDumpProperty = coreDump.selectedProperty();
@@ -1241,9 +1231,7 @@ public class GUI extends Application {
 
         displayMemoryMonitorOption.setOnAction(actionEvent -> showMemoryMonitor());
 
-        enableDebugMode.setOnAction(actionEvent -> {
-            emu.setDebugMode(enableDebugMode.selectedProperty().get());
-        });
+        enableDebugMode.setOnAction(actionEvent -> emu.setDebugMode(enableDebugMode.selectedProperty().get()));
 
         return debugMenu;
     }

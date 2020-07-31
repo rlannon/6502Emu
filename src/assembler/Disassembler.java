@@ -152,7 +152,7 @@ public class Disassembler {
         ArrayList<String> disassembly = new ArrayList<>();
 
         // write a short header
-        disassembly.add("Address\t\tHexdump\t\tAssembly\n");
+        disassembly.add("Address\t\tHexdump\t\tDisassembly\n");
 
         // todo: fix index out of bounds exception when page at $ff00 is disassembled
 
