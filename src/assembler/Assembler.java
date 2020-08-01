@@ -43,8 +43,7 @@ public class Assembler {
 
     // bank and data buffer
     private Vector<Bank> banks;
-    private byte[] buffer;  // a buffer to hold our bytecode until we hit a new segment or the end of the file
-    // todo: make 'buffer' into a vector since it is being updated so much?
+    private Vector<Byte> buffer;  // a buffer to hold our bytecode until we hit a new segment or the end of the file
 
     // Symbols
     private String parentSymbolName;    // the name of the current parent symbol (allows for .sym)
@@ -61,17 +60,9 @@ public class Assembler {
     private void copyToBuffer(byte[] toCopy) {
         // adds the contents of array 'toCopy' to our buffer
 
-        // first, create a new array of the appropriate size
-        byte[] bankData = new byte[this.buffer.length + toCopy.length];
-
-        // copy the contents
-        // copy the data from the buffer into bankData
-        System.arraycopy(this.buffer, 0, bankData, 0, this.buffer.length);
-        // now, copy the definedBytes into bankData where we left off
-        System.arraycopy(toCopy, 0, bankData, this.buffer.length, toCopy.length);
-
-        // finally, set 'buffer' equal to 'bankData' (to update the buffer)
-        this.buffer = bankData;
+        for (byte b:  toCopy) {
+            this.buffer.add(b);
+        }
     }
 
     private String getFullSymbolName(String symName) throws Exception {
@@ -394,7 +385,7 @@ public class Assembler {
         }
 
         // once we are done, create a new bank if we had data
-        if (this.buffer.length > 0)
+        if (this.buffer.size() > 0)
         {
             this.banks.add(new Bank(this.currentOrigin, this.buffer));
         }
@@ -421,12 +412,12 @@ public class Assembler {
         // Handles a .org directive
 
         // check to see if we have data in our current buffer
-        if (this.buffer.length > 0) {
+        if (this.buffer.size() > 0) {
             // create a new bank and add it to our banks
             this.banks.add(new Bank(this.currentOrigin, this.buffer));
 
             // clear the buffer
-            this.buffer = new byte[]{};
+            this.buffer.clear();
         }
 
         // get the new origin and update currentOrigin and currentOffset
@@ -647,9 +638,9 @@ public class Assembler {
         this.currentOffset = 0;
         this.debugSymbols.clear();
         this.banks.clear();
+        this.buffer.clear();
         this.symbolTable.clear();
         this.relocationTable.clear();
-        this.buffer = new byte[]{};
         this.currentOrigin = (short)0x8000; // default program origin is 0x8000
         this.lineNumber = 0;
         this.rsAddress = (short)0x0200;  // default rs origin is 0x0200
@@ -662,6 +653,7 @@ public class Assembler {
         this.symbolTable = new Hashtable<>();
         this.relocationTable = new Vector<>();
         this.banks = new Vector<>();
+        this.buffer = new Vector<>();
 
         // reset the assembler
         this.reset();

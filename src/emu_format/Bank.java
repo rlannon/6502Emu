@@ -1,5 +1,7 @@
 package emu_format;
 
+import java.util.Vector;
+
 public class Bank {
     /*
 
@@ -28,9 +30,16 @@ public class Bank {
         }
     }
 
-    int dataSize() { return this.data.length; }
+    public Bank(short org, Vector<Byte> data)
+    {
+        this.org = org;
+        this.data = new byte[data.size()];
+        for (int i = 0; i < this.data.length; i++) {
+            this.data[i] = data.elementAt(i);
+        }
+    }
 
-    public Bank(short org, byte[] data)
+    Bank(short org, byte[] data)
     {
         this.org = org;
         this.data = data;
