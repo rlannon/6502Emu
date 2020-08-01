@@ -605,6 +605,49 @@ public class GUI extends Application {
         textArea.setScrollTop(0);
     }
 
+    private void displayHexDump() {
+        // Display the hexdump for one page of memory at the given address
+        Stage hexStage = new Stage();
+        String[] addrData = getAddressDataDialog("Hex dump");
+        int address;
+
+        try {
+            address = getAddress(addrData[0], addrData[1]);
+            if (address < 0 || address > 0xFFFF)
+                throw new Exception("Address out of range");
+        } catch (Exception e) {
+            errorAlert("Invalid address", e.getMessage());
+            return;
+        }
+
+        // Create the scene
+        HBox hbox = new HBox();
+        hbox.setMinHeight(500);
+        Scene disAsmScene = new Scene(hbox);
+
+        // Create the textarea to hold the disassembly
+        TextArea textArea = new TextArea();
+        textArea.setMinWidth(350);
+        textArea.setWrapText(true);
+        textArea.setFont(Font.font("Courier new", FontWeight.NORMAL, 12));
+        textArea.setEditable(false);
+
+        for (int i = 0; i < 256; i++) {
+            byte b = emu.getMemory()[address + i];
+            textArea.appendText(String.format("$%02X", b & 0xFF) + " ");
+        }
+
+        // add the textarea
+        hbox.getChildren().add(textArea);
+
+        // create the scene
+        hexStage.setScene(disAsmScene);
+        hexStage.setTitle("Hex dump");
+
+        // finally, display the stage
+        hexStage.show();
+    }
+
     private void showMemoryMonitor() {
         Stage memStage = new Stage();
         memStage.setTitle("Memory Monitor");
@@ -1111,10 +1154,7 @@ public class GUI extends Application {
 
         disassembleOption.setOnAction(actionEvent -> disassembly());
 
-        hexdumpOption.setOnAction(actionEvent -> {
-            // todo: hexdump
-            System.out.println("Hexdump not yet implemented");
-        });
+        hexdumpOption.setOnAction(actionEvent -> displayHexDump());
 
         configureInput.setOnAction(actionEvent -> configureInputsDialog());
 

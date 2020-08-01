@@ -2,8 +2,8 @@ package GUI;
 
 import java.io.File;
 
-public class FileExt {
-    public static String getFilenameWithoutExtension(File toGet) throws Exception {
+class FileExt {
+    static String getFilenameWithoutExtension(File toGet) throws Exception {
         String[] possibleExtensions = new String[]{".s", ".S", ".asm"};
 
         String filename = toGet.getAbsolutePath();

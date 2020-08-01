@@ -12,14 +12,14 @@ public class Emulator {
 
     private CPU cpu;    // the CPU we are running; automatically creates debugger
     public Debugger debugger;
-    private Assembler assemble; // the Assembler we are using
+    private Assembler assembler; // the Assembler we are using
     private HashMap<String, Input> inputs;   // user inputs; these are configurable
 
     private boolean debugMode;  // whether the emulator is running in debug mode
 
     public void assemble(String inputFilename, String outputFilename) throws Exception {
         // Assemble a file
-        this.assemble.assemble(inputFilename, outputFilename);
+        this.assembler.assemble(inputFilename, outputFilename);
     }
 
     public ArrayList<String> disassemble(int startAddress) throws Exception {
@@ -166,7 +166,7 @@ public class Emulator {
         this.debugMode = false;
         this.reset();
 
-        this.assemble = new Assembler();
+        this.assembler = new Assembler();
         this.inputs = new HashMap<>();
     }
 }
