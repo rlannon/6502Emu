@@ -103,9 +103,11 @@ public class EmuFile {
 
                     in.close();
                 } else {
+                    in.close(); // prevent a resource leak
                     throw new Exception("Incompatible .emu file version");
                 }
             } else {
+                in.close(); // prevent a resource leak
                 throw new Exception("Invalid magic number in .emu file");
             }
         }

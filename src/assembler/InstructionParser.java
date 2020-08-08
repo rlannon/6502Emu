@@ -76,8 +76,8 @@ class InstructionParser {
         }
     }
 
-    static OpcodeInformation getMnemonic(byte opcode) throws Exception {
-        // Gets the mnemonic and addressing mode of the instruction with a given opcode
+    static Instruction getInstruction(byte opcode) throws Exception {
+        // Gets the Instruction object associated with the given opcode
         boolean found = false;
         int i = 0, j = 0;
         while (i < AllInstructions.INSTRUCTIONS.length && !found) {
@@ -97,7 +97,7 @@ class InstructionParser {
         }
 
         if (found) {
-            return new OpcodeInformation(AllInstructions.INSTRUCTIONS[i].getAddressingMode(opcode), opcode);
+            return AllInstructions.INSTRUCTIONS[i];
         } else {
             throw new Exception("Illegal instruction");
         }

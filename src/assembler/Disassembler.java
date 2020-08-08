@@ -11,29 +11,6 @@ public class Disassembler {
 
      */
 
-    private static int getInstructionLength(int addressingMode) throws Exception {
-        // Gets the length of an instruction given an addressing mode
-        switch (addressingMode){
-            case AddressingMode.Implied:
-                return 1;
-            case AddressingMode.Immediate:
-            case AddressingMode.ZeroPage:
-            case AddressingMode.ZeroPageX:
-            case AddressingMode.ZeroPageY:
-            case AddressingMode.Indirect:
-            case AddressingMode.IndirectX:
-            case AddressingMode.IndirectY:
-            case AddressingMode.Relative:
-                return 2;
-            case AddressingMode.Absolute:
-            case AddressingMode.AbsoluteX:
-            case AddressingMode.AbsoluteY:
-                return 3;
-            default:
-                throw new Exception("Invalid addressing mode");
-        }
-    }
-
     private static int getInstructionLength(byte opcode) {
         /*
 
@@ -86,7 +63,7 @@ public class Disassembler {
             boolean valid_instruction = true;
 
             try {
-                instructionData = InstructionParser.getMnemonic(hex[index]);
+                instructionData = InstructionParser.getInstruction(hex[index]);
                 instructionLength = getInstructionLength(instructionData.getValue());
             } catch (Exception e) {
                 // if an exception was thrown, it's not an official opcode
