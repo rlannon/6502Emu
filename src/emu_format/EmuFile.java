@@ -15,6 +15,7 @@ public class EmuFile {
      */
 
     // todo: if file is being used by another process, display in user console?
+    // todo: allow emu files to be written without debug symbols
 
     private Vector<Bank> prgBanks;
     private Vector<DebugSymbol> debugSymbols;

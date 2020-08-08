@@ -1,7 +1,5 @@
 package assembler;
 
-import javafx.util.Pair;
-
 class InstructionParser {
     // A class to parse instructions
 
@@ -15,73 +13,302 @@ class InstructionParser {
              * Implements some unofficial addressing modes and opcodes
              */
 
-            /* Immediate, Zero, ZeroX, ZeroY, Absolute, AbsoluteX, AbsoluteY, Indirect, IndirectX, IndirectY, Implied, Relative */
-            new Instruction("ADC", new byte[]{0x069, 0x65, 0x75, (byte)0xFF, 0x6d, 0x7d, 0x79, (byte)0xFF, 0x61, 0x71, (byte)0xFF, (byte)0xFF}),
-            new Instruction("AND", new byte[]{0x29, 0x25, 0x35, (byte)0xFF, 0x2d, 0x3d, 0x39, (byte)0xFF, 0x21, 0x31, (byte)0xFF, (byte)0xFF}),
-            new Instruction("ASL", new byte[]{ (byte)0xFF, 0x06, 0x16, (byte)0xFF, 0x0e, 0x1e, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x0a, (byte)0xFF }),
-            new Instruction("BIT", new byte[]{(byte)0xFF, 0x24, (byte)0xFF, (byte)0xFF, 0x2c, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
-            new Instruction("BPL", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x10}),
-            new Instruction("BMI", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x30}),
-            new Instruction("BVC", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x50}),
-            new Instruction("BVS", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x70}),
-            new Instruction("BCC", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0x90}),
-            new Instruction("BCS", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xb0}),
-            new Instruction("BNE", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xd0}),
-            new Instruction("BEQ", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xf0}),
-            new Instruction("BRK", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x00, (byte)0xFF}),
-            new Instruction("CMP", new byte[]{(byte)0xc9, (byte)0xc5, (byte)0xd5, (byte)0xFF, (byte)0xcd, (byte)0xdd, (byte)0xd9, (byte)0xFF, (byte)0xc1, (byte)0xd1, (byte)0xFF, (byte)0xFF}),
-            new Instruction("CPX", new byte[]{(byte)0xe0, (byte)0xe4, (byte)0xFF, (byte)0xFF, (byte)0xec, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
-            new Instruction("CPY", new byte[]{(byte)0xc0, (byte)0xc4, (byte)0xFF, (byte)0xFF, (byte)0xcc, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
-            new Instruction("DEC", new byte[]{(byte)0xFF, (byte)0xc6, (byte)0xd6, (byte)0xFF, (byte)0xce, (byte)0xde, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
-            new Instruction("EOR", new byte[]{0x49, 0x45, 0x55, (byte)0xFF, 0x4d, 0x5d, 0x59, (byte)0xFF, 0x41, 0x51, (byte)0xFF, (byte)0xFF}),
-            new Instruction("CLC", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x18, (byte)0xFF}),
-            new Instruction("SEC", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x38, (byte)0xFF}),
-            new Instruction("CLI", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x58, (byte)0xFF}),
-            new Instruction("SEI", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x78, (byte)0xFF}),
-            new Instruction("CLV", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xb8, (byte)0xFF}),
-            new Instruction("CLD", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xd8, (byte)0xFF}),
-            new Instruction("SED", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xf8, (byte)0xFF}),
-            new Instruction("INC", new byte[]{(byte)0xFF, (byte)0xe6, (byte)0xf6, (byte)0xFF, (byte)0xee, (byte)0xfe, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
-            new Instruction("JMP", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x4c, (byte)0xFF, (byte)0xFF, 0x6c, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
-            new Instruction("JSR", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x20, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
-            new Instruction("LDA", new byte[]{(byte)0xa9, (byte)0xa5, (byte)0xb5, (byte)0xFF, (byte)0xad, (byte)0xbd, (byte)0xb9, (byte)0xFF, (byte)0xa1, (byte)0xb1, (byte)0xFF, (byte)0xFF}),
-            new Instruction("LDX", new byte[]{(byte)0xa2, (byte)0xa6, (byte)0xFF, (byte)0xb6, (byte)0xae, (byte)0xFF, (byte)0xbe, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
-            new Instruction("LDY", new byte[]{(byte)0xa0, (byte)0xa4, (byte)0xb4, (byte)0xFF, (byte)0xac, (byte)0xbc, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
-            new Instruction("LSR", new byte[]{(byte)0xFF, 0x46, 0x56, (byte)0xFF, 0x4e, 0x5e, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x4a, (byte)0xFF}),
-            new Instruction("NOP", new byte[]{ /* unofficial */ (byte)0x80, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xea, (byte)0xFF}),
-            new Instruction("ORA", new byte[]{0x09, 0x05, 0x15, (byte)0xFF, 0x0d, 0x1d, 0x19, (byte)0xFF, 0x01, 0x11, (byte)0xFF, (byte)0xFF}),
-            new Instruction("TAX", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xaa, (byte)0xFF}),
-            new Instruction("TXA", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0x8a, (byte)0xFF}),
-            new Instruction("DEX", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xca, (byte)0xFF}),
-            new Instruction("INX", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xe8, (byte)0xFF}),
-            new Instruction("TAY", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xa8, (byte)0xFF}),
-            new Instruction("TYA", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0x98, (byte)0xFF}),
-            new Instruction("DEY", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0x88, (byte)0xFF}),
-            new Instruction("INY", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xc8, (byte)0xFF}),
-            new Instruction("ROR", new byte[]{(byte)0xFF, 0x66, 0x76, (byte)0xFF, 0x6e, 0x7e, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x6a, (byte)0xFF}),
-            new Instruction("ROL", new byte[]{(byte)0xFF, 0x26, 0x36, (byte)0xFF, 0x2e, 0x3e, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x2a, (byte)0xFF}),
-            new Instruction("RTI", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x40, (byte)0xFF}),
-            new Instruction("RTS", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x60, (byte)0xFF}),
-            new Instruction("SBC", new byte[]{(byte)0xe9, (byte)0xe5, (byte)0xf5, (byte)0xFF, (byte)0xed, (byte)0xfd, (byte)0xf9, (byte)0xFF, (byte)0xe1, (byte)0xf1, (byte)0xFF, (byte)0xFF}),
-            new Instruction("STA", new byte[]{(byte)0xFF, (byte)0x85, (byte)0x95, (byte)0xFF, (byte)0x8d, (byte)0x9d, (byte)0x99, (byte)0xFF, (byte)0x81, (byte)0x91, (byte)0xFF, (byte)0xFF}),
-            new Instruction("TXS", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0x9a, (byte)0xFF}),
-            new Instruction("TSX", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xba, (byte)0xFF}),
-            new Instruction("PHA", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x48, (byte)0xFF}),
-            new Instruction("PLA", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x68, (byte)0xFF}),
-            new Instruction("PHP", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x08, (byte)0xFF}),
-            new Instruction("PLP", new byte[]{(byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, 0x28, (byte)0xFF}),
-            new Instruction("STX", new byte[]{(byte)0xFF, (byte)0x86, (byte)0xFF, (byte)0x96, (byte)0x8e, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
-            new Instruction("STY", new byte[]{(byte)0xFF, (byte)0x84, (byte)0x94, (byte)0xFF, (byte)0x8c, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
-
+            new Instruction(
+                "ADC",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0x69),
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x65),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x75),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x6d),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x79),
+                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0x61),
+                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0x71)
+                }
+            ),
+            new Instruction(
+                "AND",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0x29),
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x25),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x35),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x2d),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x3d),
+                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x39),
+                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0x21),
+                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0x31)
+                }
+            ),
+            new Instruction(
+                "ASL",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x06),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x16),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x0e),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x1e),
+                    new OpcodeInformation(AddressingMode.Implied, (byte)0x0a)
+                }
+            ),
+            new Instruction(
+                "BIT",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x24),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x2c),
+                }
+            ),
+            new Instruction("BPL", new OpcodeInformation(AddressingMode.Relative, (byte)0x10)),
+            new Instruction("BMI", new OpcodeInformation(AddressingMode.Relative, (byte)0x30)),
+            new Instruction("BVC", new OpcodeInformation(AddressingMode.Relative, (byte)0x50)),
+            new Instruction("BVS", new OpcodeInformation(AddressingMode.Relative, (byte)0x70)),
+            new Instruction("BCC", new OpcodeInformation(AddressingMode.Relative, (byte)0x90)),
+            new Instruction("BCS", new OpcodeInformation(AddressingMode.Relative, (byte)0xb0)),
+            new Instruction("BNE", new OpcodeInformation(AddressingMode.Relative, (byte)0xd0)),
+            new Instruction("BEQ", new OpcodeInformation(AddressingMode.Relative, (byte)0xf0)),
+            new Instruction("BRK", new OpcodeInformation(AddressingMode.Implied, (byte)0x00)),
+            new Instruction(
+                "CMP",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0xc9),
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0xc5),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0xd5),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0xcd),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0xdd),
+                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0xd9),
+                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0xc1),
+                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0xd1)
+                }
+            ),
+            new Instruction(
+                "CPX",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0xe0),
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0xe4),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0xec),
+                }
+            ),
+            new Instruction(
+                "CPY",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0xc0),
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0xc4),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0xcc),
+                }
+            ),
+            new Instruction(
+                "DEC",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0xc6),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0xd6),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0xce),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0xde),
+                }
+            ),
+            new Instruction(
+                "EOR",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0x49),
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x45),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x55),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x4d),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x5d),
+                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x59),
+                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0x41),
+                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0x51),
+                }
+            ),
+            new Instruction("CLC", new OpcodeInformation(AddressingMode.Implied, (byte)0x18)),
+            new Instruction("SEC", new OpcodeInformation(AddressingMode.Implied, (byte)0x38)),
+            new Instruction("CLI", new OpcodeInformation(AddressingMode.Implied, (byte)0x58)),
+            new Instruction("SEI", new OpcodeInformation(AddressingMode.Implied, (byte)0x78)),
+            new Instruction("CLV", new OpcodeInformation(AddressingMode.Implied, (byte)0xb8)),
+            new Instruction("CLD", new OpcodeInformation(AddressingMode.Implied, (byte)0xd8)),
+            new Instruction("SED", new OpcodeInformation(AddressingMode.Implied, (byte)0xf8)),
+            new Instruction(
+                "INC",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0xe6),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0xf6),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0xee),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0xfe),
+                }
+            ),
+            new Instruction(
+                "JMP",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x4c),
+                    new OpcodeInformation(AddressingMode.Indirect, (byte)0x6c)
+                }
+            ),
+            new Instruction("JSR", new OpcodeInformation(AddressingMode.Absolute, (byte)0x20)),
+            new Instruction(
+                "LDA",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0xa9),
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0xa5),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0xb5),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0xad),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0xbd),
+                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0xb9),
+                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0xa1),
+                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0xb1),
+                }
+            ),
+            new Instruction(
+                "LDX",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0xa2),
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0xa6),
+                    new OpcodeInformation(AddressingMode.ZeroPageY, (byte)0xb6),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0xae),
+                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0xbe),
+                }
+            ),
+            new Instruction(
+                "LDX",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0xa0),
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0xa4),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0xb4),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0xac),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0xbc),
+                }
+            ),
+            new Instruction(
+                "LSR",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x46),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x56),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x4e),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x5e),
+                    new OpcodeInformation(AddressingMode.Implied, (byte)0x4a)
+                }
+            ),
+            new Instruction(
+                "NOP",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0x80, false),   // unofficial
+                    new OpcodeInformation(AddressingMode.Implied, (byte)0xea)
+                }
+            ),
+            new Instruction(
+                "ORA",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0x09),
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x05),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x15),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x0d),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x1d),
+                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x19),
+                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0x01),
+                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0x11)
+                }
+            ),
+            new Instruction("TAX", new OpcodeInformation(AddressingMode.Implied, (byte)0xaa)),
+            new Instruction("TXA", new OpcodeInformation(AddressingMode.Implied, (byte)0x8a)),
+            new Instruction("DEX", new OpcodeInformation(AddressingMode.Implied, (byte)0xca)),
+            new Instruction("INX", new OpcodeInformation(AddressingMode.Implied, (byte)0xe8)),
+            new Instruction("TAY", new OpcodeInformation(AddressingMode.Implied, (byte)0xa8)),
+            new Instruction("TYA", new OpcodeInformation(AddressingMode.Implied, (byte)0x98)),
+            new Instruction("DEY", new OpcodeInformation(AddressingMode.Implied, (byte)0x88)),
+            new Instruction("INY", new OpcodeInformation(AddressingMode.Implied, (byte)0xc8)),
+            new Instruction(
+                "ROR",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x66),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x76),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x6e),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x7e),
+                    new OpcodeInformation(AddressingMode.Implied, (byte)0x6a)
+                } 
+            ),
+            new Instruction(
+                "ROL",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x26),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x36),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x2e),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x3e),
+                    new OpcodeInformation(AddressingMode.Implied, (byte)0x2a)
+                } 
+            ),
+            new Instruction("RTI", new OpcodeInformation(AddressingMode.Implied, (byte)0x40)),
+            new Instruction("RTS", new OpcodeInformation(AddressingMode.Implied, (byte)0x60)),
+            new Instruction(
+                "SBC",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.Immediate, (byte)0xe9),
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0xe5),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0xf5),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0xed),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0xfd),
+                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0xf9),
+                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0xe1),
+                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0xf1),
+                }
+            ),
+            new Instruction(
+                "STA",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x85),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x95),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x8d),
+                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x9d),
+                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x99),
+                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0x81),
+                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0x99)
+                }
+            ),
+            new Instruction("TXS", new OpcodeInformation(AddressingMode.Implied, (byte)0x9a)),
+            new Instruction("TSX", new OpcodeInformation(AddressingMode.Implied, (byte)0xba)),
+            new Instruction("PHA", new OpcodeInformation(AddressingMode.Implied, (byte)0x48)),
+            new Instruction("PLA", new OpcodeInformation(AddressingMode.Implied, (byte)0x68)),
+            new Instruction("PHP", new OpcodeInformation(AddressingMode.Implied, (byte)0x08)),
+            new Instruction("PLP", new OpcodeInformation(AddressingMode.Implied, (byte)0x28)),
+            new Instruction(
+                "STX",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x86),
+                    new OpcodeInformation(AddressingMode.ZeroPageY, (byte)0x96),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x8e)
+                }
+            ),
+            new Instruction(
+                "STY",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x84),
+                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x94),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x8c)
+                }
+            ),
+            
             /* Support some unofficial opcodes */
-            new Instruction("LAX", new byte[]{(byte)0xFF, (byte)0xA7, (byte)0xFF, (byte)0xb7, (byte)0xaf, (byte)0xff, (byte)0xbf, (byte)0xff, (byte)0xa3, (byte)0xa3, (byte)0xff, (byte)0xff}),
-            new Instruction("SAX", new byte[]{(byte)0xFF, (byte)0x87, (byte)0xFF, (byte)0x97, (byte)0x8f, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0x83, (byte)0xFF, (byte)0xFF, (byte)0xFF}),
+
+            new Instruction(
+                "LAX",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0xa7, false),
+                    new OpcodeInformation(AddressingMode.ZeroPageY, (byte)0xb7, false),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0xaf, false),
+                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0xbf, false),
+                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0xa3, false),
+                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0xb3, false)
+                }
+            ),
+            new Instruction(
+                "SAX",
+                new OpcodeInformation[]{
+                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x87, false),
+                    new OpcodeInformation(AddressingMode.ZeroPageY, (byte)0x97, false),
+                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x8f, false),
+                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0x83, false)
+                }
+            ),
+
             new Instruction("ALR", new byte[]{(byte)0x4b, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff}),
             new Instruction("ANC", new byte[]{(byte)0x0b, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff}),
             new Instruction("ARR", new byte[]{(byte)0x6b, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff}),
     };
 
-    static boolean supportsAddressingMode(String mnemonic, int mode) throws Exception {
+    static boolean supportsAddressingMode(String mnemonic, AddressingMode mode) throws Exception {
         /*
         Determines whether the instruction in question supports the addressing mode specified
          */
@@ -98,7 +325,7 @@ class InstructionParser {
         if (toTest == null)
             throw new Exception("No such mnemonic");
         else
-            return (toTest.getAddressingMode(mode) != (byte)0xFF);
+            return toTest.supportsAddressingMode(mode);
     }
 
     static boolean isMnemonic(String candidate) {
@@ -121,7 +348,7 @@ class InstructionParser {
         return found;
     }
 
-    static byte getOpcode(String mnemonic, int addressingMode) throws Exception {
+    static byte getOpcode(String mnemonic, AddressingMode mode) throws Exception {
         // Gets the opcode for the instruction
         boolean found = false;
         int i = 0;
@@ -141,7 +368,7 @@ class InstructionParser {
 
         if (found)
         {
-            return OPCODES[i].getAddressingMode(addressingMode);
+            return OPCODES[i].getOpcode(mode);
         }
         else
         {
@@ -149,31 +376,28 @@ class InstructionParser {
         }
     }
 
-    static Pair<String, Integer> getMnemonic(byte opcode) throws Exception {
+    static OpcodeInformation getMnemonic(byte opcode) throws Exception {
         // Gets the mnemonic and addressing mode of the instruction with a given opcode
         boolean found = false;
         int i = 0, j = 0;
         while (i < OPCODES.length && !found) {
-            byte[] addressingModes = OPCODES[i].getAddressingModes();
+            byte[] addressingModes = OPCODES[i].getOpcodes();
             j = 0;
-            boolean foundAddrMode = false;
-            while (j < addressingModes.length && !foundAddrMode) {
+            while (j < addressingModes.length && !found) {
                 if (addressingModes[j] == opcode) {
-                    foundAddrMode = true;
+                    found = true;
                 } else {
                     j++;
                 }
             }
-
-            if (foundAddrMode) {
-                found = true;
-            } else {
+            
+            if (!found) {
                 i++;
             }
         }
 
         if (found) {
-            return new Pair<>(OPCODES[i].getMnemonic(), j);
+            return new OpcodeInformation(OPCODES[i].getAddressingMode(opcode), opcode);
         } else {
             throw new Exception("Illegal instruction");
         }
@@ -239,10 +463,10 @@ class InstructionParser {
                 }
             }
 
-            // do not support decimal mode (at least not yet)
+            // We will support parsing decimal integers, but BCD is not supported
             switch (prefix) {
                 case "#":
-                    throw new Exception("Decimal mode currently unsupported");
+                    return (short) Integer.parseInt(numString, 10);
                 case "#$":
                 case "$":
                     // binary
@@ -256,7 +480,7 @@ class InstructionParser {
         }
     }
 
-    static int getAddressingMode(String[] data) throws Exception {
+    static AddressingMode getAddressingMode(String[] data) throws Exception {
         // get the addressing mode of the instruction
 
         if (data.length == 1)
@@ -266,6 +490,7 @@ class InstructionParser {
         else
         {
             String mnemonic = data[0].toUpperCase();
+            
             if (mnemonic.equals("BPL") || mnemonic.equals("BMI") || mnemonic.equals("BVC") || mnemonic.equals("BVS") ||
                 mnemonic.equals("BCC") || mnemonic.equals("BCS") || mnemonic.equals("BNE") || mnemonic.equals("BEQ") || mnemonic.equals("BRK"))
             {
@@ -360,10 +585,10 @@ class InstructionParser {
 
         byte opcode = 0;
 
-        int addressingMode = getAddressingMode(data);
+        AddressingMode mode = getAddressingMode(data);
         short value;
 
-        opcode = getOpcode(data[0], addressingMode);
+        opcode = getOpcode(data[0], mode);
 
         // the opcode will be 0xFF (an invalid instruction) if we had a bad addressing mode
         if (opcode == (byte)0xFF)
@@ -371,7 +596,7 @@ class InstructionParser {
             throw new Exception("Invalid opcode or addressing mode");
         }
         else {
-            if (addressingMode == AddressingMode.Implied) {
+            if (mode == AddressingMode.Implied) {
                 // instruction width 1
                 return new byte[]{opcode};
             } else {
@@ -379,15 +604,15 @@ class InstructionParser {
                 value = (data[1].matches(Assembler.SYMBOL_NAME_REGEX)) ? 0x00 : parseNumber(data[1]);
 
                 // get instruction width based on addressing mode
-                if (addressingMode == AddressingMode.Immediate || addressingMode == AddressingMode.IndirectX ||
-                        addressingMode == AddressingMode.IndirectY || addressingMode == AddressingMode.Relative ||
-                        addressingMode == AddressingMode.ZeroPage || addressingMode == AddressingMode.ZeroPageX ||
-                        addressingMode == AddressingMode.ZeroPageY) {
+                if (mode == AddressingMode.Immediate || mode == AddressingMode.IndirectX ||
+                        mode == AddressingMode.IndirectY || mode == AddressingMode.Relative ||
+                        mode == AddressingMode.ZeroPage || mode == AddressingMode.ZeroPageX ||
+                        mode == AddressingMode.ZeroPageY) {
                     // instruction width 2
                     byte[] operand = new byte[]{(byte) (value & 0xFF)};
                     return new byte[]{opcode, operand[0]};
-                } else if (addressingMode == AddressingMode.Absolute || addressingMode == AddressingMode.AbsoluteX ||
-                        addressingMode == AddressingMode.AbsoluteY || addressingMode == AddressingMode.Indirect) {
+                } else if (mode == AddressingMode.Absolute || mode == AddressingMode.AbsoluteX ||
+                        mode == AddressingMode.AbsoluteY || mode == AddressingMode.Indirect) {
                     // instruction width 3
                     byte[] operand = new byte[]{(byte) (value & 0xFF), (byte) ((value >> 8) & 0xFF)};
                     return new byte[]{opcode, operand[0], operand[1]};

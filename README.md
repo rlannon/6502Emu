@@ -22,7 +22,7 @@ The assembly syntax and conventions I use are fairly standard:
   * `.rsset <address>` - Sets the address that should be used for the `.rs` directive
   * `.macro <name> <value>` - Defines a macro; all references to it in the code will be replaced with the macro's value
   * `.db <bytes>` or `.byte <bytes>` - Defines a series of bytes in program memory
-  * `.dw <words>` or `.word <words>` - Defines a series of words. Note you should not define them in little endian format, the assembler will do it automatically (if you wish to use little endian, use `.db`)
+  * `.dw <words>` or `.word <words>` - Defines a series of words. Note you should not define them in little endian format, the assembler will do it automatically. If you wish to specify data this way, then use `.db`.
 * Labels may contain:
   * letters
   * numbers, though they may not begin with a number
