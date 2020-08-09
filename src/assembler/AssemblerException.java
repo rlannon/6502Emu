@@ -1,12 +1,8 @@
 package assembler;
 
 public class AssemblerException extends Exception {
-    private int lineNumber;
-    private String message;
-
-    public int getLineNumber() {
-        return this.lineNumber;
-    }
+    final private int lineNumber;
+    final private String message;
 
     @Override
     public String getMessage() {

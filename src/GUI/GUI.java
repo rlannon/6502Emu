@@ -1,21 +1,16 @@
 package GUI;
 
 // custom packages
+
 import assembler.Status;
 import emu.DrawGraphics;
 import emu.Emulator;
 import emu.Input;
-
-// JDK packages
-
-// JavaFX
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.beans.property.BooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -34,9 +29,12 @@ import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-// Other JDK packages
 import java.io.File;
 import java.util.ArrayList;
+
+// JDK packages
+// JavaFX
+// Other JDK packages
 
 public class GUI extends Application {
     /*
@@ -46,7 +44,7 @@ public class GUI extends Application {
 
      */
 
-    private Emulator emu;
+    final private Emulator emu;
 
     final public static int pxWidth = 8;
     final public static int pxHeight = 8;
@@ -56,12 +54,12 @@ public class GUI extends Application {
 
     private BooleanProperty genCoreDumpProperty;
 
-    private Canvas screen;
-    private GraphicsContext screenContext;
+    final private Canvas screen;
+    final private GraphicsContext screenContext;
     private AnimationTimer timer;
     private long lastNMI;
 
-    private DrawGraphics gDrawer;
+    final private DrawGraphics gDrawer;
 
     private int monitorPage;
     private TextArea memoryMonitor;
@@ -510,20 +508,12 @@ public class GUI extends Application {
 
         Button bindKeyButton = new Button("Bind Key...");
         bindKeyButton.setDisable(true);
-        bindKeyButton.setOnAction(new EventHandler<>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                bindKeyButton.setOnKeyPressed(new EventHandler<>() {
-                    @Override
-                    public void handle(KeyEvent keyEvent) {
-                        mappedKey.clear();
-                        mappedKey.appendText(keyEvent.getCode().toString());
-                        keyEvent.consume();
-                        grid.requestFocus();
-                    }
-                });
-            }
-        });
+        bindKeyButton.setOnAction(actionEvent -> bindKeyButton.setOnKeyPressed(keyEvent -> {
+            mappedKey.clear();
+            mappedKey.appendText(keyEvent.getCode().toString());
+            keyEvent.consume();
+            grid.requestFocus();
+        }));
 
         grid.add(bindKeyButton, 3, 3, 2, 1);
 
@@ -759,9 +749,7 @@ public class GUI extends Application {
         // Pause
         Button pauseButton = new Button("Pause");
         grid.add(pauseButton, 5, 2, 2, 1);
-        pauseButton.setOnAction(actionEvent -> {
-            this.pause();
-        });
+        pauseButton.setOnAction(actionEvent -> this.pause());
 
         // Continue
         Button continueButton = new Button("Continue");

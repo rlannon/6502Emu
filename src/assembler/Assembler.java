@@ -42,15 +42,15 @@ public class Assembler {
     private short rsAddress; // the internal counter for the .rs directive
 
     // bank and data buffer
-    private Vector<Bank> banks;
+    final private Vector<Bank> banks;
     private byte[] buffer;  // a buffer to hold our bytecode until we hit a new segment or the end of the file
     // todo: make 'buffer' into a vector since it is being updated so much?
 
     // Symbols
     private String parentSymbolName;    // the name of the current parent symbol (allows for .sym)
-    private Vector<DebugSymbol> debugSymbols;   // debug symbols for our debugger
-    private Hashtable<String, AssemblerSymbol> symbolTable; // the table containing our assembler symbols
-    private Vector<RelocationSymbol> relocationTable;   // the table for holding all unresolved symbol references
+    final private Vector<DebugSymbol> debugSymbols;   // debug symbols for our debugger
+    final private Hashtable<String, AssemblerSymbol> symbolTable; // the table containing our assembler symbols
+    final private Vector<RelocationSymbol> relocationTable;   // the table for holding all unresolved symbol references
 
     /*
 
@@ -153,7 +153,7 @@ public class Assembler {
                 AssemblerSymbol asmSym = this.symbolTable.get(rSym.getName());
                 if (asmSym != null)
                 {
-                    byte[] littleEndianAddressData = null;
+                    byte[] littleEndianAddressData;
 
                     // different addressing modes will require different things from the symbol
                     if (rSym.getAddressingMode() == AddressingMode.Relative) {
@@ -325,29 +325,16 @@ public class Assembler {
 
                     // .org directive
                     switch (directive) {
-                        case ".org":
-                            this.handleOrg(lineData);
-                            break;
-                        case ".db":
-                        case ".byte":
-                            this.defineByte(lineData);
-                            break;
-                        case ".dw":
-                        case ".word":
-                            this.defineWords(lineData);
-                            break;
-                        case ".rsset":
-                            this.handleRSSet(lineData);
-                            break;
-                        case ".rs":
-                            this.reserveBytes(lineData);
-                            break;
-                        case ".macro":
-                            this.createMacro(lineData);
-                            break;
-                        default:
+                        case ".org" -> this.handleOrg(lineData);
+                        case ".db", ".byte" -> this.defineByte(lineData);
+                        case ".dw", ".word" -> this.defineWords(lineData);
+                        case ".rsset" -> this.handleRSSet(lineData);
+                        case ".rs" -> this.reserveBytes(lineData);
+                        case ".macro" -> this.createMacro(lineData);
+                        default -> {
                             asmScan.close();
                             throw new AssemblerException("Invalid assembler directive", this.lineNumber);
+                        }
                     }
                 }
                 // otherwise, it is a symbol name

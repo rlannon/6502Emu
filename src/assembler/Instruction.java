@@ -1,5 +1,6 @@
 package assembler;
 
+import java.util.Arrays;
 import java.util.Vector;
 
 class UnknownInstructionException extends Exception {
@@ -9,33 +10,12 @@ class UnknownInstructionException extends Exception {
 }
 
 class Instruction {
-    private String mnemonic;
-    private Vector<OpcodeInformation> modes;
+    final private String mnemonic;
+    final private Vector<OpcodeInformation> modes;
 
     String getMnemonic()
     {
         return this.mnemonic;
-    }
-
-    AddressingMode getAddressingMode(byte opcode) throws Exception {
-        // Gets the addressing mode associated with the specified opcode
-        int i = 0;
-        boolean found = false;
-        while (i < this.modes.size() && !found) {
-            if (this.modes.get(i).getOpcode() == opcode) {
-                found = true;
-            }
-            else {
-                i++;
-            }
-        }
-
-        if (found) {
-            return this.modes.get(i).getAddresingMode();
-        }
-        else {
-            throw new Exception("No such opcode for instruction '" + this.mnemonic + "'");
-        }
     }
 
     byte[] getOpcodes() {
@@ -51,7 +31,7 @@ class Instruction {
         int i = 0;
         boolean found = false;
         while (!found && i < this.modes.size()) {
-            if (this.modes.get(i).getAddresingMode() == mode) {
+            if (this.modes.get(i).getAddressingMode() == mode) {
                 found = true;
             }
             else {
@@ -59,7 +39,7 @@ class Instruction {
             }
         }
 
-        byte b = 0;
+        byte b;
         if (found) {
             b = this.modes.get(i).getOpcode();
         }
@@ -75,7 +55,7 @@ class Instruction {
         int i = 0;
         boolean found = false;
         while (!found && i < this.modes.size()) {
-            if (this.modes.get(i).getAddresingMode() == mode) {
+            if (this.modes.get(i).getAddressingMode() == mode) {
                 found = true;
             }
             else {
@@ -90,41 +70,10 @@ class Instruction {
         return this.modes;
     }
 
-    Instruction(String mnemonic, byte[] addressingModes) {
-        this.mnemonic = mnemonic;
-        // this.addressingModes = addressingModes;
-        // todo: refactor to populate by addressing mode
-        this.modes = new Vector<>();
-        AddressingMode modes[] = {
-            AddressingMode.Immediate,
-            AddressingMode.ZeroPage,
-            AddressingMode.ZeroPageX,
-            AddressingMode.ZeroPageY,
-            AddressingMode.Absolute,
-            AddressingMode.AbsoluteX,
-            AddressingMode.AbsoluteY,
-            AddressingMode.Indirect,
-            AddressingMode.IndirectX,
-            AddressingMode.IndirectY,
-            AddressingMode.Implied,
-            AddressingMode.Relative
-        };
-        for (int i = 0; i < addressingModes.length; i++) {
-            if (addressingModes[i] == (byte)0xFF) {
-                continue;
-            }
-            else {
-                this.modes.add(new OpcodeInformation(modes[i], addressingModes[i], true));
-            }
-        }
-    }
-
     Instruction(String mnemonic, OpcodeInformation[] opcodes) {
         // Create the table containing the
         this.modes = new Vector<>();
-        for (OpcodeInformation oi: opcodes) {
-            this.modes.add(oi);
-        }
+        this.modes.addAll(Arrays.asList(opcodes));
         this.mnemonic = mnemonic;
     }
 

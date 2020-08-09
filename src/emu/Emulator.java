@@ -1,22 +1,19 @@
 package emu;
 
 import assembler.Disassembler;
-import GUI.GUI;
 import assembler.Assembler;
 import emu_format.EmuFile;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 
 public class Emulator {
     final int LATCH = 0x2000;   // the latch that tells us whether it's safe to copy memory
     final int NMI_REFRESH = 33;    // an NMI every 33 milliseconds (1/30 of a second)
 
-    private CPU cpu;    // the CPU we are running; automatically creates debugger
+    final private CPU cpu;    // the CPU we are running; automatically creates debugger
     public Debugger debugger;
-    private Assembler assemble; // the Assembler we are using
-    private HashMap<String, Input> inputs;   // user inputs; these are configurable
+    final private Assembler assemble; // the Assembler we are using
+    final private HashMap<String, Input> inputs;   // user inputs; these are configurable
 
     private boolean debugMode;  // whether the emulator is running in debug mode
 
@@ -38,7 +35,7 @@ public class Emulator {
         @return A string array containing the disassembly
          */
 
-        ArrayList<String> disassembly = new ArrayList<>();
+        ArrayList<String> disassembly;
 
         if (startAddress < 0 || startAddress > 0xFFFF) {
             throw new Exception("Start address out of range");

@@ -2,12 +2,12 @@ package assembler;
 
 class RelocationSymbol {
     // Used for resolving symbol references in files
-    private String name;    // the symbol's name
-    private short bank; // the bank where the symbol was found
-    private short offset;   // the offset within that bank
-    private AddressingMode addressingMode; // the instruction addressing mode
-    private boolean isDefinition;   // if we are using a .db directive, note that
-    private int lineNumber; // the line number of the symbol
+    final private String name;    // the symbol's name
+    final private short bank; // the bank where the symbol was found
+    final private short offset;   // the offset within that bank
+    final private AddressingMode addressingMode; // the instruction addressing mode
+    final private boolean isDefinition;   // if we are using a .db directive, note that
+    final private int lineNumber; // the line number of the symbol
 
     String getName() { return this.name; }
     short getBank() { return this.bank; }

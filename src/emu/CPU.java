@@ -1543,8 +1543,6 @@ public class CPU {
             this.setFlag(Status.ZERO);
         else
             this.clearFlag(Status.ZERO);
-
-        return;
     }
 
     private void shiftLeft(int address) {

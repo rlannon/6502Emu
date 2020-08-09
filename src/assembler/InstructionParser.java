@@ -289,7 +289,7 @@ class InstructionParser {
         }
 
         if (found) {
-            return in.getModes().get(i).getAddresingMode();
+            return in.getModes().get(i).getAddressingMode();
         }
         else {
             throw new UnknownInstructionException();

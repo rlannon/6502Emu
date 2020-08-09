@@ -1,11 +1,11 @@
 package assembler;
 
 class OpcodeInformation {
-    private boolean official;   // unofficial opcodes are supported, but the assembler should warn the user if the are used
-    private AddressingMode mode;    // the addressing mode of the opcode
-    private byte opcode;    // the actual opcode
+    final private boolean official;   // unofficial opcodes are supported, but the assembler should warn the user if the are used
+    final private AddressingMode mode;    // the addressing mode of the opcode
+    final private byte opcode;    // the actual opcode
 
-    AddressingMode getAddresingMode() {
+    AddressingMode getAddressingMode() {
         return this.mode;
     }
 
@@ -25,11 +25,5 @@ class OpcodeInformation {
 
     OpcodeInformation(AddressingMode mode, byte opcode) {
         this(mode, opcode, true);
-    }
-
-    OpcodeInformation() {
-        this.mode = AddressingMode.Implied;
-        this.opcode = 0;
-        this.official = false;
     }
 }

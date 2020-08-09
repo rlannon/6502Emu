@@ -1,7 +1,5 @@
 package assembler;
 
-import javafx.util.Pair;
-
 import java.util.ArrayList;
 
 public class Disassembler {

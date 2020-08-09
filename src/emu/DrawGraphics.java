@@ -13,10 +13,9 @@ public class DrawGraphics implements Runnable {
 
      */
 
-    private Thread t;
-    private String threadName;
-    private byte[] memory;
-    private GraphicsContext gc;
+    final private String threadName;
+    final private byte[] memory;
+    final private GraphicsContext gc;
 
     private final static int BUFFER_MIN = 0x2400;
     private final static int BUFFER_LEN = GUI.screenWidth * GUI.screenWidth;
@@ -61,25 +60,9 @@ public class DrawGraphics implements Runnable {
         }
     }
 
-    public boolean isAlive() {
-        // Determines whether the thread is running or not
-
-        if (t == null) {
-            return false;
-        } else {
-            return t.isAlive();
-        }
-    }
-
-    public void join() throws InterruptedException {
-        if (t != null) {
-            t.join();
-        }
-    }
-
     public void start() {
         System.out.println("Starting thread...");
-        t = new Thread(this, this.threadName);
+        Thread t = new Thread(this, this.threadName);
         t.start();
     }
 

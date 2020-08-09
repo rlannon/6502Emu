@@ -6,9 +6,9 @@ public class Input {
     Has a memory-mapped address, whether it triggers an IRQ, and the appropriate key bindings
      */
 
-    private boolean triggersIRQ;    // whether this input triggers an IRQ
-    private int address;  // the address to which that input is mapped
-    private String mappedKeyCode;  // the key code associated with the input
+    final private boolean triggersIRQ;    // whether this input triggers an IRQ
+    final private int address;  // the address to which that input is mapped
+    final private String mappedKeyCode;  // the key code associated with the input
 
     public String getMappedKeyCode() {
         return this.mappedKeyCode;
