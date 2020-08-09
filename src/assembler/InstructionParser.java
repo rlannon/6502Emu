@@ -79,10 +79,10 @@ class InstructionParser {
     static Instruction getInstruction(byte opcode) throws Exception {
         // Gets the Instruction object associated with the given opcode
         boolean found = false;
-        int i = 0, j = 0;
+        int i = 0;
         while (i < AllInstructions.INSTRUCTIONS.length && !found) {
             byte[] addressingModes = AllInstructions.INSTRUCTIONS[i].getOpcodes();
-            j = 0;
+            int j = 0;
             while (j < addressingModes.length && !found) {
                 if (addressingModes[j] == opcode) {
                     found = true;
@@ -164,19 +164,13 @@ class InstructionParser {
             }
 
             // We will support parsing decimal integers, but BCD is not supported
-            switch (prefix) {
-                case "#":
-                    return (short) Integer.parseInt(numString, 10);
-                case "#$":
-                case "$":
-                    // binary
-                    return (short) Integer.parseInt(numString, 16);
-                case "#%":
-                case "%":
-                    return (short) Integer.parseInt(numString, 2);
-                default:
-                    throw new Exception("Invalid numeric prefix");
-            }
+            // binary
+            return switch (prefix) {
+                case "#" -> (short) Integer.parseInt(numString, 10);
+                case "#$", "$" -> (short) Integer.parseInt(numString, 16);
+                case "#%", "%" -> (short) Integer.parseInt(numString, 2);
+                default -> throw new Exception("Invalid numeric prefix");
+            };
         }
     }
 
@@ -305,12 +299,10 @@ class InstructionParser {
     static byte[] parseInstruction(String[] data) throws Exception {
         // Given a series of strings containing instruction mnemonics, returns the bytecode that those strings entail
 
-        byte opcode = 0;
-
         AddressingMode mode = getAddressingMode(data);
         short value;
 
-        opcode = getOpcode(data[0], mode);
+        byte opcode = getOpcode(data[0], mode);
 
         // the opcode will be 0xFF (an invalid instruction) if we had a bad addressing mode
         if (opcode == (byte)0xFF)

@@ -250,6 +250,12 @@ public class GUI extends Application {
         // add the menubar to the page
         MenuBar menuBar = this.createMenu(primaryStage);
 
+        // if we are on a mac, use the system menu bar
+        final String os = System.getProperty("os.name");
+        if (os != null && os.startsWith("Mac")) {
+            menuBar.useSystemMenuBarProperty().set(true);
+        }
+
         VBox outer = new VBox(menuBar);
         HBox hbox = new HBox();
         hbox.setSpacing(10);

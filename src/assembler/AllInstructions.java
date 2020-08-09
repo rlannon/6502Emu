@@ -156,7 +156,7 @@ final class AllInstructions {
             }
         ),
         new Instruction(
-            "LDX",
+            "LDY",
             new OpcodeInformation[]{
                 new OpcodeInformation(AddressingMode.Immediate, (byte)0xa0),
                 new OpcodeInformation(AddressingMode.ZeroPage, (byte)0xa4),
