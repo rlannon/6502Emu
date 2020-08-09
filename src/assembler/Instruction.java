@@ -2,6 +2,12 @@ package assembler;
 
 import java.util.Vector;
 
+class UnknownInstructionException extends Exception {
+    UnknownInstructionException() {
+        super();
+    }
+}
+
 class Instruction {
     private String mnemonic;
     private Vector<OpcodeInformation> modes;

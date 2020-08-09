@@ -14,13 +14,17 @@ public class Disassembler {
     private static int getInstructionLength(byte opcode) {
         /*
 
-        Gets the length of an instruction where the disassembly is unknown
+        Gets the length of an instruction; this will also function where the disassembly is unknown
+
+        If the instruction is known, we can use the addressing mode to determine the instruction length.
+            Otherwise, we will need a slightly more complex algorithm
 
         Luckily, the 6502 opcodes have a pretty consistent map of opcode endings to instruction length
-        Each instruction begins with an multiple of 0x20 -- 0x00, 0x20, 0x40, 0x60, 0x80, 0xA0, 0xC0, 0xE0;
-            this is the row, and doesn't really matter for this calculation. However, the base will allow us to determine the column
+        Each instruction can be grouped into blocks separated by 0x20 -- 0x00, 0x20, 0x40, 0x60, 0x80, 0xA0, 0xC0, 0xE0;
+            this is the row, and doesn't really matter for this calculation.
+            However, the base will allow us to determine the column number.
         Each column in the matrix will determine the length of the instruction:
-            + 0x00 -> undocumented opcodes have a length of 2 here (documented ones differ)
+            + 0x00 -> may have a length of 1 or 2
             + 0x04 -> 2
             + 0x08 -> 2
             + 0x0C -> 3
@@ -36,17 +40,41 @@ public class Disassembler {
 
          */
 
-        // First, we must figure out the remainder when we divide by 0x20 to figure out the column
-        int remainder = opcode % 0x20;
         int len;
-        if (remainder == 0x12 || remainder == 0x1a) {
-            len = 1;
+
+        // use InstructionParser.getAddressingMode; if the instruction is unknown, it will throw an exception
+        try {
+            AddressingMode mode = InstructionParser.getAddressingMode(opcode);
+            len = switch(mode) {
+                case Implied:
+                    yield 1;
+                case ZeroPage:
+                case ZeroPageX:
+                case ZeroPageY:
+                case Immediate:
+                case Relative:
+                case Indirect:
+                case IndirectX:
+                case IndirectY:
+                    yield 2;
+                case Absolute:
+                case AbsoluteX:
+                case AbsoluteY:
+                    yield 3;
+            };
         }
-        else {
-            // using integer division, we can get the column number
-            int col_num = remainder / 0x04;
-            int[] columns = {2, 2, 2, 3, 2, 2, 3, 3};   // follows the matrix we gave in the comments
-            len = columns[col_num];
+        catch (UnknownInstructionException e) {
+            // The instruction is unknown
+            // First, we must figure out the remainder when we divide by 0x20 to figure out the column
+            int remainder = ((int) opcode & 0xFF) % 0x20;
+            if (remainder == 0x12 || remainder == 0x1a) {
+                len = 1;
+            } else {
+                // using integer division, we can get the column number
+                int col_num = remainder / 0x04;
+                int[] columns = {2, 2, 2, 3, 2, 2, 3, 3};   // follows the matrix we gave in the comments
+                len = columns[col_num];
+            }
         }
 
         return len;

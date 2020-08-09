@@ -247,7 +247,7 @@ final class AllInstructions {
                 new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x9d),
                 new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x99),
                 new OpcodeInformation(AddressingMode.IndirectX, (byte)0x81),
-                new OpcodeInformation(AddressingMode.IndirectY, (byte)0x99)
+                new OpcodeInformation(AddressingMode.IndirectY, (byte)0x91)
             }
         ),
         new Instruction("TXS", new OpcodeInformation(AddressingMode.Implied, (byte)0x9a)),

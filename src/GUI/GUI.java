@@ -1009,8 +1009,8 @@ public class GUI extends Application {
 
         final Menu fileMenu = fileMenu(stage);
         final Menu toolsMenu = toolsMenu(stage);
-        final Menu runMenu = runMenu(stage);
-        final Menu debugMenu = debugMenu(stage);
+        final Menu runMenu = runMenu();
+        final Menu debugMenu = debugMenu();
 
         // Create the MenuBar
         menu.getMenus().addAll(fileMenu, toolsMenu, runMenu, debugMenu);
@@ -1121,18 +1121,14 @@ public class GUI extends Application {
             }
         });
 
-        disassembleOption.setOnAction(actionEvent -> {
-            disassembly();
-        });
+        disassembleOption.setOnAction(actionEvent -> disassembly());
 
         hexdumpOption.setOnAction(actionEvent -> {
             // todo: hexdump
             System.out.println("Hexdump not yet implemented");
         });
 
-        configureInput.setOnAction(actionEvent -> {
-            configureInputsDialog();
-        });
+        configureInput.setOnAction(actionEvent -> configureInputsDialog());
 
         // set our 'genCoreDumpProperty' to be equal to our
         genCoreDumpProperty = coreDump.selectedProperty();
@@ -1140,7 +1136,7 @@ public class GUI extends Application {
         return toolsMenu;
     }
 
-    private Menu runMenu(Stage stage) {
+    private Menu runMenu() {
         /*
 
         Run Menu
@@ -1198,7 +1194,7 @@ public class GUI extends Application {
         return runMenu;
     }
 
-    private Menu debugMenu(Stage stage) {
+    private Menu debugMenu() {
         /*
 
         Debug Menu
@@ -1247,9 +1243,7 @@ public class GUI extends Application {
 
         displayMemoryMonitorOption.setOnAction(actionEvent -> showMemoryMonitor());
 
-        enableDebugMode.setOnAction(actionEvent -> {
-            emu.setDebugMode(enableDebugMode.selectedProperty().get());
-        });
+        enableDebugMode.setOnAction(actionEvent -> emu.setDebugMode(enableDebugMode.selectedProperty().get()));
 
         return debugMenu;
     }

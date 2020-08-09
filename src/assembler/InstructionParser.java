@@ -76,7 +76,7 @@ class InstructionParser {
         }
     }
 
-    static Instruction getInstruction(byte opcode) throws Exception {
+    static Instruction getInstruction(byte opcode) throws UnknownInstructionException {
         // Gets the Instruction object associated with the given opcode
         boolean found = false;
         int i = 0;
@@ -99,7 +99,7 @@ class InstructionParser {
         if (found) {
             return AllInstructions.INSTRUCTIONS[i];
         } else {
-            throw new Exception("Illegal instruction");
+            throw new UnknownInstructionException();
         }
     }
 
@@ -274,12 +274,12 @@ class InstructionParser {
         }
     }
 
-    static AddressingMode getAddressingMode(byte opcode) throws Exception {
+    static AddressingMode getAddressingMode(byte opcode) throws UnknownInstructionException {
         // Gets the addressing mode of the opcode
         Instruction in = InstructionParser.getInstruction(opcode);
         boolean found = false;
         int i = 0;
-        while (i < in.getModes().size()) {
+        while (i < in.getModes().size() && !found) {
             if (in.getModes().get(i).getOpcode() == opcode) {
                 found = true;
             }
@@ -292,7 +292,7 @@ class InstructionParser {
             return in.getModes().get(i).getAddresingMode();
         }
         else {
-            throw new Exception("No addressing mode for instruction");
+            throw new UnknownInstructionException();
         }
     }
 
