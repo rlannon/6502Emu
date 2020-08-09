@@ -280,6 +280,28 @@ class InstructionParser {
         }
     }
 
+    static AddressingMode getAddressingMode(byte opcode) throws Exception {
+        // Gets the addressing mode of the opcode
+        Instruction in = InstructionParser.getInstruction(opcode);
+        boolean found = false;
+        int i = 0;
+        while (i < in.getModes().size()) {
+            if (in.getModes().get(i).getOpcode() == opcode) {
+                found = true;
+            }
+            else {
+                i++;
+            }
+        }
+
+        if (found) {
+            return in.getModes().get(i).getAddresingMode();
+        }
+        else {
+            throw new Exception("No addressing mode for instruction");
+        }
+    }
+
     static byte[] parseInstruction(String[] data) throws Exception {
         // Given a series of strings containing instruction mnemonics, returns the bytecode that those strings entail
 

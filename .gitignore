@@ -2,3 +2,9 @@ src/.idea/*
 out/*
 MANIFEST.MF
 .vscode/*
+*.iml
+target/*
+.idea/*
+.settings/*
+out/*
+.project

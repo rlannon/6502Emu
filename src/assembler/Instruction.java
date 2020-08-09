@@ -80,6 +80,10 @@ class Instruction {
         return found;
     }
 
+    Vector<OpcodeInformation> getModes() {
+        return this.modes;
+    }
+
     Instruction(String mnemonic, byte[] addressingModes) {
         this.mnemonic = mnemonic;
         // this.addressingModes = addressingModes;
@@ -122,5 +126,10 @@ class Instruction {
         this.modes = new Vector<>();
         this.modes.add(opcode);
         this.mnemonic = mnemonic;
+    }
+
+    Instruction() {
+        this.modes = new Vector<>();
+        this.mnemonic = "";
     }
 }

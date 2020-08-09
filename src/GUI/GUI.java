@@ -4,11 +4,11 @@ package GUI;
 import assembler.Status;
 import emu.DrawGraphics;
 import emu.Emulator;
+import emu.Input;
 
 // JDK packages
 
 // JavaFX
-import emu.Input;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.beans.property.BooleanProperty;

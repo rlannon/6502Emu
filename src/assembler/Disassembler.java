@@ -58,20 +58,20 @@ public class Disassembler {
         StringBuilder disAsmString = new StringBuilder();
 
         if (hex != null) {
-            Pair<String, Integer> instructionData;  // contains <mnemonic, addressing mode>
+            Instruction instructionData;    // the information for this instruction, obtained from the opcode
             int instructionLength;
             boolean valid_instruction = true;
 
             try {
                 instructionData = InstructionParser.getInstruction(hex[index]);
-                instructionLength = getInstructionLength(instructionData.getValue());
+                instructionLength = getInstructionLength(hex[index]);
             } catch (Exception e) {
                 // if an exception was thrown, it's not an official opcode
                 valid_instruction = false;
 
                 // try to get the instruction length; this can be determined by the opcode itself
                 instructionLength = getInstructionLength(hex[index]);
-                instructionData = new Pair<>(".byte", 0);   // just use a .byte directive for unknowns
+                instructionData = new Instruction();   // just use a .byte directive for unknowns
             }
             disAsmString.append(String.format("$%04x:\t\t", (index) & 0xFFFF)); // write the address of the instruction
 
@@ -81,30 +81,31 @@ public class Disassembler {
                 disAsmString.append(String.format("%02x ", b));
             }
             disAsmString.append((instructionLength < 3) ? "\t\t" : "\t");   // for display formatting
-            disAsmString.append(instructionData.getKey());
+            disAsmString.append(instructionData.getMnemonic());
 
             // if we had a valid instruction, formulate the syntax
             if (valid_instruction) {
-                if (instructionData.getValue() == AddressingMode.Immediate) {
+                AddressingMode instructionMode = InstructionParser.getAddressingMode(hex[index]);
+                if (instructionMode == AddressingMode.Immediate) {
                     disAsmString.append(String.format(" #$%02x", hex[index + 1]));
-                } else if (instructionData.getValue() == AddressingMode.Relative) {
+                } else if (instructionMode == AddressingMode.Relative) {
                     disAsmString.append(String.format("  $%02x", hex[index + 1]));
                 }
-                else if (instructionData.getValue() == AddressingMode.ZeroPage) {
+                else if (instructionMode == AddressingMode.ZeroPage) {
                     disAsmString.append(String.format(" $%02x", hex[index + 1]));
-                } else if (instructionData.getValue() == AddressingMode.ZeroPageX) {
+                } else if (instructionMode == AddressingMode.ZeroPageX) {
                     disAsmString.append(String.format(" $%02x, X", hex[index + 1]));
-                } else if (instructionData.getValue() == AddressingMode.ZeroPageY) {
+                } else if (instructionMode == AddressingMode.ZeroPageY) {
                     disAsmString.append(String.format(" $%02x, Y", hex[index + 1]));
-                } else if (instructionData.getValue() == AddressingMode.Absolute) {
+                } else if (instructionMode == AddressingMode.Absolute) {
                     disAsmString.append(String.format(" $%02x%02x", hex[index + 2], hex[index + 1]));
-                } else if (instructionData.getValue() == AddressingMode.AbsoluteX) {
+                } else if (instructionMode == AddressingMode.AbsoluteX) {
                     disAsmString.append(String.format(" $%02x%02x, X", hex[index + 2], hex[index + 1]));
-                } else if (instructionData.getValue() == AddressingMode.AbsoluteY) {
+                } else if (instructionMode == AddressingMode.AbsoluteY) {
                     disAsmString.append(String.format(" $%02x%02x, Y", hex[index + 2], hex[index + 1]));
-                } else if (instructionData.getValue() == AddressingMode.IndirectX) {
+                } else if (instructionMode == AddressingMode.IndirectX) {
                     disAsmString.append(String.format(" ($%02x, X)", hex[index + 1]));
-                } else if (instructionData.getValue() == AddressingMode.IndirectY) {
+                } else if (instructionMode == AddressingMode.IndirectY) {
                     disAsmString.append(String.format(" ($%02x), Y", hex[index + 1]));
                 }
             }

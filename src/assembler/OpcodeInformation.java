@@ -26,4 +26,10 @@ class OpcodeInformation {
     OpcodeInformation(AddressingMode mode, byte opcode) {
         this(mode, opcode, true);
     }
+
+    OpcodeInformation() {
+        this.mode = AddressingMode.Implied;
+        this.opcode = 0;
+        this.official = false;
+    }
 }

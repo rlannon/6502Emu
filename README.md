@@ -6,6 +6,16 @@ A simple 6502 emulator and development kit, written in Java.
 
 Simply compile and run in your JVM. Note that because JavaFX is used for the user interface, it cannot be compiled to a `.jar` file (or at least not easily).
 
+This project has mostly been built using IntelliJ. The docs on [the JetBrains website](https://www.jetbrains.com/help/idea/javafx.html) notes that you may need to run with the following VM arguments:
+
+    --module-path %PATH_TO_FIX% --add-modules javafx.controls,javafx.fxml
+
+where `%PATH_TO_FIX%` is the path to the `lib` folder of your JavaFX SDK. If you use openjdk, you will also need to add
+
+    --add-exports javafx.graphics/com.sun.javafx.sg.prism=ALL-UNNAMED
+
+Note that since JavaFX is no longer part of the JDK, you will need to download the SDK from [here](https://gluonhq.com/products/javafx/).
+
 ## Features
 
 This project is intended to be a simple development kit for the 6502. While it may eventually lead to an NES emulator (or something similar), it currently has very limited hardware emulation capabilities which are not nearly as complex or powerful as an NES emulator might.
