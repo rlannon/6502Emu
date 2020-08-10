@@ -603,6 +603,54 @@ public class GUI extends Application {
         disAsmStage.setScene(disAsmScene);
         disAsmStage.setTitle("Disassembly");
         disAsmStage.show();
+
+        textArea.setScrollTop(0);
+    }
+
+    private void showHexdump() {
+        // Display the hexdump
+        Stage s = new Stage();
+        String[] addrData = getAddressDataDialog("Hexdump");
+        int address;
+
+        try {
+            address = getAddress(addrData[0], addrData[1]);
+            if (address < 0 || address > 0xFFFF)
+                throw new Exception("Address out of range");
+        } catch (Exception e) {
+            errorAlert("Invalid address", e.getMessage());
+            return;
+        }
+
+        // Create the scene
+        HBox hbox = new HBox();
+        hbox.setMinHeight(500);
+        Scene disAsmScene = new Scene(hbox);
+
+        // Create the textarea to hold the disassembly
+        TextArea textArea = new TextArea();
+        textArea.setMinWidth(350);
+        textArea.setFont(Font.font("Courier new", FontWeight.NORMAL, 12));
+        textArea.setEditable(false);
+
+        hbox.getChildren().add(textArea);
+
+        // note we have to ensure a hexdump of page 0xff doesn't overrun our memory
+        int i = 0;
+        while (i < 256 && (address + i) < 0xffff) {
+            textArea.appendText(String.format("$%02x ", this.emu.getMemory()[address + i]));
+            i++;
+        }
+        // todo: hexdump a defined number of bytes, or until BRK instruction found?
+
+        // create the scene
+        s.setScene(disAsmScene);
+        s.setTitle("Hexdump of " + String.format("$%04x", address));
+        s.show();
+
+        // update the display for our hexdump
+        textArea.setScrollTop(0);
+        textArea.setWrapText(true);
     }
 
     private void showMemoryMonitor() {
@@ -1111,10 +1159,7 @@ public class GUI extends Application {
 
         disassembleOption.setOnAction(actionEvent -> disassembly());
 
-        hexdumpOption.setOnAction(actionEvent -> {
-            // todo: hexdump
-            System.out.println("Hexdump not yet implemented");
-        });
+        hexdumpOption.setOnAction(actionEvent -> showHexdump());
 
         configureInput.setOnAction(actionEvent -> configureInputsDialog());
 
