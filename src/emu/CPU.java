@@ -237,6 +237,7 @@ public class CPU {
         // fetch the opcode
         int opcode = this.fetchInstruction() & 0xFF;
         byte operand;
+        int address;
 
         /*
 
@@ -249,8 +250,14 @@ public class CPU {
                 this.signal(Signal.BRK);
                 break;
 
-            // NOP
+            // NOP -- 0xea is official; the others are not
+            case 0x1A:
+            case 0x3A:
+            case 0x5A:
+            case 0x7A:
+            case 0xDA:
             case 0xEA:
+            case 0xFA:
                 // do nothing
                 break;
 
@@ -360,7 +367,7 @@ public class CPU {
             // ASL: Zero
             case 0x06:
                 // get the address and the last bit
-                int address = this.fetchImmediateByte() & 0xFF;
+                address = this.fetchImmediateByte() & 0xFF;
                 this.shiftLeft(address);
                 break;
             // ASL: Zero, X
@@ -729,7 +736,7 @@ public class CPU {
                 this.pc = address;
                 break;
             // JMP: Indirect
-            case 0x6C:
+            case 0x6C: {
                 int pointer = this.fetchImmediateShort() & 0xFFFF;
                 int ptrLow = pointer & 0xFF;
                 int ptrHigh = (pointer & 0xFF00) >> 8;
@@ -739,6 +746,7 @@ public class CPU {
 
                 this.pc = ((addressHigh & 0xFF) << 8) | (addressLow & 0xFF);
                 break;
+            }
 
             /*
 
@@ -749,12 +757,12 @@ public class CPU {
 
              */
 
-            case 0x20:
+            case 0x20: {
                 // Fetch the address to jump to and the return address
                 address = this.fetchImmediateShort() & 0xFFFF;
                 int returnAddress = this.pc - 1;
-                byte returnLow = (byte)(returnAddress & 0xFF);
-                byte returnHigh = (byte)((returnAddress >> 8) & 0xFF);
+                byte returnLow = (byte) (returnAddress & 0xFF);
+                byte returnHigh = (byte) ((returnAddress >> 8) & 0xFF);
 
                 // write the return address to the stack
                 this.pushToStack(returnHigh);
@@ -763,6 +771,7 @@ public class CPU {
                 // transfer control to 'address'
                 this.pc = address;
                 break;
+            }
 
             /*
 
@@ -1089,15 +1098,16 @@ public class CPU {
 
              */
 
-            case 0x40:
+            case 0x40: {
                 // get status
                 this.status = this.pullFromStack();
 
                 // get pc; remember we always push high, low
-                returnLow = this.pullFromStack();
-                returnHigh = this.pullFromStack();
+                byte returnLow = this.pullFromStack();
+                byte returnHigh = this.pullFromStack();
                 this.pc = ((returnHigh << 8) & 0xFF00) | (returnLow & 0xFF);
                 break;
+            }
 
             /*
 
@@ -1109,10 +1119,10 @@ public class CPU {
 
              */
 
-            case 0x60:
+            case 0x60: {
                 // fetch the low, then high bytes of the return address
-                returnLow = this.pullFromStack();
-                returnHigh = this.pullFromStack();
+                byte returnLow = this.pullFromStack();
+                byte returnHigh = this.pullFromStack();
 
                 // todo: determine whether jumping to a subroutine with a return address of $6000 would push $FF, $60 or $FF, $5F
 
@@ -1122,6 +1132,7 @@ public class CPU {
                 // add one to ensure we return to the right place
                 this.pc += 1;
                 break;
+            }
 
             /*
 
@@ -1390,11 +1401,10 @@ public class CPU {
                 break;
             }
             // SAX: ind y
-            case 0x83: {
-                byte value = (byte)(this.a & this.x & 0xFF);
-                this.storeIndirectY(value);
+            case 0x83:
+                operand = (byte)(this.a & this.x & 0xFF);
+                this.storeIndirectY(operand);
                 break;
-            }
 
             // ALR: imm
             case 0x4b:
@@ -1428,6 +1438,69 @@ public class CPU {
                     this.a |= 0x80;
 
                 break;
+
+            // AXS: imm
+            case 0xcb: {
+                // todo: validate the behavior of this instruction
+                // Sets X to { (A and X) - imm, without borrow } and updates NZC
+                byte old_a = this.a;
+                this.and(this.x);   // ensures flags are
+                this.x = this.a;
+                this.a = old_a;
+                this.x -= this.fetchImmediateByte();
+                this.updateNZFlags(this.x);
+                break;
+            }
+
+            // todo: DCP -- a DEC followed by CMP (but with more addressing modes)
+            // DCP: zp
+            case 0xc7:
+            // DCP: zp,x
+            case 0xd7: {
+                int offset = (opcode == 0xd7) ? this.x : 0;
+                address = this.fetchImmediateByte() & 0xff;
+                this.memory[address + offset] -= 1;
+                this.compare(this.a, this.memory[address + offset]);
+                break;
+            }
+            // DCP: abs
+            // DCP: abs,x
+            // DCP: abs,y
+            case 0xcf:
+            case 0xdf:
+            case 0xdb: {
+                int offset = (opcode == 0xdf) ? this.x : ((opcode == 0xdb) ? this.y : 0);
+                address = this.fetchImmediateShort() & 0xffff;
+                this.memory[address + offset] -= 1;
+                this.compare(this.a, this.memory[address + offset]);
+                break;
+            }
+            // DCP: (d,x)
+            case 0xc3: {
+                operand = (byte)((this.fetchImmediateByte() + this.x) & 0xff);  // index by x before fetching pointer value
+                byte ptrLow = this.memory[operand & 0xff];
+                byte ptrHigh = this.memory[(operand + 1) & 0xff];
+                address = ((ptrHigh << 8) | ptrLow) & 0xffff;
+                this.memory[address] -= 1;
+                this.compare(this.a, this.memory[address]);
+                break;
+            }
+            // DCP: (d),y
+            case 0xd3: {
+                operand = this.fetchImmediateByte();
+                byte ptrLow = this.memory[operand & 0xff];
+                byte ptrHigh = this.memory[(operand + 1) & 0xff];
+                address = ((ptrHigh << 8) | ptrLow) & 0xffff;
+                this.memory[address + this.y] -= 1;
+                this.compare(this.a, this.memory[address + this.y]);
+                break;
+            }
+
+            // todo: ISC -- an INC followed by SBC (but with more addressing modes)
+            // todo: RLA -- ROL followed by AND
+            // todo: RRA - ROR followed by ADC
+            // todo: SLO -- ASL followed by ORA
+            // todo: SRE -- LSR followed by EOR
 
             // Invalid opcodes will fall through to here
             default:
