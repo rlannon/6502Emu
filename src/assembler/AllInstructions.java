@@ -326,49 +326,49 @@ final class AllInstructions {
         new Instruction(
             "RLA",
             new OpcodeInformation[]{
-                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x27, false),
-                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x37, false),
-                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x2f, false),
-                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x3f, false),
-                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x3b, false),
-                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0x23, false),
-                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0x33, false)
+                new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x27, false),
+                new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x37, false),
+                new OpcodeInformation(AddressingMode.Absolute, (byte)0x2f, false),
+                new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x3f, false),
+                new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x3b, false),
+                new OpcodeInformation(AddressingMode.IndirectX, (byte)0x23, false),
+                new OpcodeInformation(AddressingMode.IndirectY, (byte)0x33, false)
             }
         ),
         new Instruction(
             "RRA",
             new OpcodeInformation[]{
-                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x67, false),
-                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x77, false),
-                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x6f, false),
-                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x7f, false),
-                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x7b, false),
-                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0x63, false),
-                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0x73, false)
+                new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x67, false),
+                new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x77, false),
+                new OpcodeInformation(AddressingMode.Absolute, (byte)0x6f, false),
+                new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x7f, false),
+                new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x7b, false),
+                new OpcodeInformation(AddressingMode.IndirectX, (byte)0x63, false),
+                new OpcodeInformation(AddressingMode.IndirectY, (byte)0x73, false)
             }
         ),
         new Instruction(
             "SLO",
             new OpcodeInformation[]{
-                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x07, false),
-                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x17, false),
-                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x0f, false),
-                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x1f, false),
-                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x1b, false),
-                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0x03, false),
-                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0x13, false)
+                new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x07, false),
+                new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x17, false),
+                new OpcodeInformation(AddressingMode.Absolute, (byte)0x0f, false),
+                new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x1f, false),
+                new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x1b, false),
+                new OpcodeInformation(AddressingMode.IndirectX, (byte)0x03, false),
+                new OpcodeInformation(AddressingMode.IndirectY, (byte)0x13, false)
             }
         ),
         new Instruction(
             "SRE",
             new OpcodeInformation[]{
-                    new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x47, false),
-                    new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x57, false),
-                    new OpcodeInformation(AddressingMode.Absolute, (byte)0x4f, false),
-                    new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x5f, false),
-                    new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x5b, false),
-                    new OpcodeInformation(AddressingMode.IndirectX, (byte)0x43, false),
-                    new OpcodeInformation(AddressingMode.IndirectY, (byte)0x53, false)
+                new OpcodeInformation(AddressingMode.ZeroPage, (byte)0x47, false),
+                new OpcodeInformation(AddressingMode.ZeroPageX, (byte)0x57, false),
+                new OpcodeInformation(AddressingMode.Absolute, (byte)0x4f, false),
+                new OpcodeInformation(AddressingMode.AbsoluteX, (byte)0x5f, false),
+                new OpcodeInformation(AddressingMode.AbsoluteY, (byte)0x5b, false),
+                new OpcodeInformation(AddressingMode.IndirectX, (byte)0x43, false),
+                new OpcodeInformation(AddressingMode.IndirectY, (byte)0x53, false)
             }
         ),
     };
