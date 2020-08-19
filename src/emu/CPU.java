@@ -738,11 +738,11 @@ public class CPU {
             // JMP: Indirect
             case 0x6C: {
                 int pointer = this.fetchImmediateShort() & 0xFFFF;
-                int ptrLow = pointer & 0xFF;
-                int ptrHigh = (pointer & 0xFF00) >> 8;
+                byte ptrLow = (byte)(pointer & 0xFF);
+                byte ptrHigh = (byte)(((pointer & 0xFF00) >> 8) & 0xFF);
 
-                int addressLow = this.memory[(ptrHigh << 8) | ptrLow];
-                int addressHigh = this.memory[(ptrHigh << 8) | ((ptrLow + 1) & 0xFF)];
+                int addressLow = this.memory[((ptrHigh & 0xFF) << 8) | (ptrLow & 0xFF)];
+                int addressHigh = this.memory[((ptrHigh & 0xFF) << 8) | ((ptrLow + 1) & 0xFF)];
 
                 this.pc = ((addressHigh & 0xFF) << 8) | (addressLow & 0xFF);
                 break;

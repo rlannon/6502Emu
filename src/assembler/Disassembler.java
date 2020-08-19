@@ -51,10 +51,10 @@ public class Disassembler {
                 case ZeroPageY:
                 case Immediate:
                 case Relative:
-                case Indirect:
                 case IndirectX:
                 case IndirectY:
                     yield 2;
+                case Indirect:
                 case Absolute:
                 case AbsoluteX:
                 case AbsoluteY:
