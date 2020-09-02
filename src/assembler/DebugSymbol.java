@@ -2,8 +2,8 @@ package assembler;
 
 public class DebugSymbol {
     private String label;
-    private int line;
-    private short address;
+    final private int line;
+    final private short address;
 
     void setLabel(String label) {
         this.label = label;

@@ -1,21 +1,16 @@
 package GUI;
 
 // custom packages
+
 import assembler.Status;
 import emu.DrawGraphics;
 import emu.Emulator;
-
-// JDK packages
-
-// JavaFX
 import emu.Input;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.beans.property.BooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -34,9 +29,12 @@ import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-// Other JDK packages
 import java.io.File;
 import java.util.ArrayList;
+
+// JDK packages
+// JavaFX
+// Other JDK packages
 
 public class GUI extends Application {
     /*
@@ -46,7 +44,7 @@ public class GUI extends Application {
 
      */
 
-    private Emulator emu;
+    final private Emulator emu;
 
     final public static int pxWidth = 8;
     final public static int pxHeight = 8;
@@ -56,12 +54,12 @@ public class GUI extends Application {
 
     private BooleanProperty genCoreDumpProperty;
 
-    private Canvas screen;
-    private GraphicsContext screenContext;
+    final private Canvas screen;
+    final private GraphicsContext screenContext;
     private AnimationTimer timer;
     private long lastNMI;
 
-    private DrawGraphics gDrawer;
+    final private DrawGraphics gDrawer;
 
     private int monitorPage;
     private TextArea memoryMonitor;
@@ -249,6 +247,12 @@ public class GUI extends Application {
 
         // add the menubar to the page
         MenuBar menuBar = this.createMenu(primaryStage);
+
+        // if we are on a mac, use the system menu bar
+        final String os = System.getProperty("os.name");
+        if (os != null && os.startsWith("Mac")) {
+            menuBar.useSystemMenuBarProperty().set(true);
+        }
 
         VBox outer = new VBox(menuBar);
         HBox hbox = new HBox();
@@ -601,14 +605,13 @@ public class GUI extends Application {
         disAsmStage.setTitle("Disassembly");
         disAsmStage.show();
 
-        // set the scroll to 0
         textArea.setScrollTop(0);
     }
 
-    private void displayHexDump() {
-        // Display the hexdump for one page of memory at the given address
-        Stage hexStage = new Stage();
-        String[] addrData = getAddressDataDialog("Hex dump");
+    private void showHexdump() {
+        // Display the hexdump
+        Stage s = new Stage();
+        String[] addrData = getAddressDataDialog("Hexdump");
         int address;
 
         try {
@@ -628,24 +631,27 @@ public class GUI extends Application {
         // Create the textarea to hold the disassembly
         TextArea textArea = new TextArea();
         textArea.setMinWidth(350);
-        textArea.setWrapText(true);
         textArea.setFont(Font.font("Courier new", FontWeight.NORMAL, 12));
         textArea.setEditable(false);
 
-        for (int i = 0; i < 256; i++) {
-            byte b = emu.getMemory()[address + i];
-            textArea.appendText(String.format("$%02X", b & 0xFF) + " ");
-        }
-
-        // add the textarea
         hbox.getChildren().add(textArea);
 
-        // create the scene
-        hexStage.setScene(disAsmScene);
-        hexStage.setTitle("Hex dump");
+        // note we have to ensure a hexdump of page 0xff doesn't overrun our memory
+        int i = 0;
+        while (i < 256 && (address + i) < 0xffff) {
+            textArea.appendText(String.format("$%02x ", this.emu.getMemory()[address + i]));
+            i++;
+        }
+        // todo: hexdump a defined number of bytes, or until BRK instruction found?
 
-        // finally, display the stage
-        hexStage.show();
+        // create the scene
+        s.setScene(disAsmScene);
+        s.setTitle("Hexdump of " + String.format("$%04x", address));
+        s.show();
+
+        // update the display for our hexdump
+        textArea.setScrollTop(0);
+        textArea.setWrapText(true);
     }
 
     private void showMemoryMonitor() {
@@ -1040,8 +1046,8 @@ public class GUI extends Application {
 
         final Menu fileMenu = fileMenu(stage);
         final Menu toolsMenu = toolsMenu(stage);
-        final Menu runMenu = runMenu(stage);
-        final Menu debugMenu = debugMenu(stage);
+        final Menu runMenu = runMenu();
+        final Menu debugMenu = debugMenu();
 
         // Create the MenuBar
         menu.getMenus().addAll(fileMenu, toolsMenu, runMenu, debugMenu);
@@ -1154,7 +1160,7 @@ public class GUI extends Application {
 
         disassembleOption.setOnAction(actionEvent -> disassembly());
 
-        hexdumpOption.setOnAction(actionEvent -> displayHexDump());
+        hexdumpOption.setOnAction(actionEvent -> showHexdump());
 
         configureInput.setOnAction(actionEvent -> configureInputsDialog());
 
@@ -1164,7 +1170,7 @@ public class GUI extends Application {
         return toolsMenu;
     }
 
-    private Menu runMenu(Stage stage) {
+    private Menu runMenu() {
         /*
 
         Run Menu
@@ -1222,7 +1228,7 @@ public class GUI extends Application {
         return runMenu;
     }
 
-    private Menu debugMenu(Stage stage) {
+    private Menu debugMenu() {
         /*
 
         Debug Menu

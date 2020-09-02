@@ -9,8 +9,8 @@ public class Bank {
 
      */
 
-    private short org;  // the origin address
-    private byte[] data;    // the prg bytecode
+    final private short org;  // the origin address
+    final private byte[] data;    // the prg bytecode
 
     public short getOrg()
     {

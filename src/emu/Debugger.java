@@ -15,10 +15,10 @@ public class Debugger {
     private boolean paused;   // whether we have stoped the CPU
     private boolean genCoreDump;    // whether we should generate a core dump on termination
     private boolean[] pagesUsed;    // tracks which pages have been touched by the CPU
-    private ArrayList<Pair<Integer, Integer>> segments;    // tracks where our segments are
-    private Hashtable<Integer, Boolean> breakpoints;  // the breakpoints we have set
-    private Hashtable<String, Integer> labels; // symbols and their addresses
-    private Hashtable<Integer, Integer> lineNumbers;    // line numbers and their addresses
+    final private ArrayList<Pair<Integer, Integer>> segments;    // tracks where our segments are
+    final private Hashtable<Integer, Boolean> breakpoints;  // the breakpoints we have set
+    final private Hashtable<String, Integer> labels; // symbols and their addresses
+    final private Hashtable<Integer, Integer> lineNumbers;    // line numbers and their addresses
 
     /*
 
@@ -160,7 +160,7 @@ public class Debugger {
         // Each page will start with { 0xFF, 0xFF, ADDR_HIGH, ADDR_LOW }
         final byte[] pageHeader = new byte[]{(byte)0xFF, (byte)0xFF};
 
-        DataOutputStream out = null;
+        DataOutputStream out;
         try {
             out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream("core.bin")));
 

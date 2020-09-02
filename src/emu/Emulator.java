@@ -10,10 +10,10 @@ public class Emulator {
     final int LATCH = 0x2000;   // the latch that tells us whether it's safe to copy memory
     final int NMI_REFRESH = 33;    // an NMI every 33 milliseconds (1/30 of a second)
 
-    private CPU cpu;    // the CPU we are running; automatically creates debugger
+    final private CPU cpu;    // the CPU we are running; automatically creates debugger
     public Debugger debugger;
-    private Assembler assembler; // the Assembler we are using
-    private HashMap<String, Input> inputs;   // user inputs; these are configurable
+    final private Assembler assemble; // the Assembler we are using
+    final private HashMap<String, Input> inputs;   // user inputs; these are configurable
 
     private boolean debugMode;  // whether the emulator is running in debug mode
 

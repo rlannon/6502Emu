@@ -1,45 +1,90 @@
 package assembler;
 
-import java.util.Hashtable;
+import java.util.Arrays;
+import java.util.Vector;
+
+class UnknownInstructionException extends Exception {
+    UnknownInstructionException() {
+        super();
+    }
+}
 
 class Instruction {
-    private String mnemonic;
-    private byte[] addressingModes;
-    private Hashtable<String, Integer> addrM;
+    final private String mnemonic;
+    final private Vector<OpcodeInformation> modes;
 
     String getMnemonic()
     {
         return this.mnemonic;
     }
 
-    byte getAddressingMode(int index) {
-        if (index < addressingModes.length)
-        {
-            return this.addressingModes[index];
+    byte[] getOpcodes() {
+        byte[] b = new byte[this.modes.size()];
+        for (int i = 0; i < this.modes.size(); i++) {
+            b[i] = this.modes.get(i).getOpcode();
         }
-        else
-        {
-            throw new IndexOutOfBoundsException("Cannot access Instruction.addressingModes of the index specified");
-        }
+        return b;
     }
 
-    byte[] getAddressingModes() {
-        return this.addressingModes;
+    byte getOpcode(AddressingMode mode) throws Exception {
+        // Gets the opcode associated with the specified addressing mode for this instruction
+        int i = 0;
+        boolean found = false;
+        while (!found && i < this.modes.size()) {
+            if (this.modes.get(i).getAddressingMode() == mode) {
+                found = true;
+            }
+            else {
+                i++;
+            }
+        }
+
+        byte b;
+        if (found) {
+            b = this.modes.get(i).getOpcode();
+        }
+        else {
+            throw new Exception("This addressing mode is not supported for the instruction");
+        }
+
+        return b;
     }
 
-    Instruction(String mnemonic, byte[] addressingModes) {
+    boolean supportsAddressingMode(AddressingMode mode) {
+        // Checks whether the addressing mode specified exists for this instruction
+        int i = 0;
+        boolean found = false;
+        while (!found && i < this.modes.size()) {
+            if (this.modes.get(i).getAddressingMode() == mode) {
+                found = true;
+            }
+            else {
+                i++;
+            }
+        }
+
+        return found;
+    }
+
+    Vector<OpcodeInformation> getModes() {
+        return this.modes;
+    }
+
+    Instruction(String mnemonic, OpcodeInformation[] opcodes) {
+        // Create the table containing the
+        this.modes = new Vector<>();
+        this.modes.addAll(Arrays.asList(opcodes));
         this.mnemonic = mnemonic;
-        this.addressingModes = addressingModes;
     }
 
-    Instruction(String mnemonic, String[] addressingModeName, int[] modeOpcode) {
-        // will allow us to change over the internal functionality in the future
+    Instruction(String mnemonic, OpcodeInformation opcode) {
+        this.modes = new Vector<>();
+        this.modes.add(opcode);
+        this.mnemonic = mnemonic;
+    }
 
-        this.addrM = new Hashtable<>(56);
-
-        assert addressingModeName.length == modeOpcode.length: "Unequal modes and opcodes";
-        for (int i = 0; i < addressingModeName.length; i++) {
-            this.addrM.put(addressingModeName[i], modeOpcode[i]);
-        }
+    Instruction() {
+        this.modes = new Vector<>();
+        this.mnemonic = "";
     }
 }

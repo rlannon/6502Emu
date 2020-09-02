@@ -47,9 +47,9 @@ public class Assembler {
 
     // Symbols
     private String parentSymbolName;    // the name of the current parent symbol (allows for .sym)
-    private Vector<DebugSymbol> debugSymbols;   // debug symbols for our debugger
-    private Hashtable<String, AssemblerSymbol> symbolTable; // the table containing our assembler symbols
-    private Vector<RelocationSymbol> relocationTable;   // the table for holding all unresolved symbol references
+    final private Vector<DebugSymbol> debugSymbols;   // debug symbols for our debugger
+    final private Hashtable<String, AssemblerSymbol> symbolTable; // the table containing our assembler symbols
+    final private Vector<RelocationSymbol> relocationTable;   // the table for holding all unresolved symbol references
 
     /*
 
@@ -144,7 +144,7 @@ public class Assembler {
                 AssemblerSymbol asmSym = this.symbolTable.get(rSym.getName());
                 if (asmSym != null)
                 {
-                    byte[] littleEndianAddressData = null;
+                    byte[] littleEndianAddressData;
 
                     // different addressing modes will require different things from the symbol
                     if (rSym.getAddressingMode() == AddressingMode.Relative) {
@@ -171,7 +171,7 @@ public class Assembler {
                     // if the asmSym length is 1 and the instruction supports zero-page addressing, use the zero page
                     if (!rSym.isDefinition()) {
                         byte opcode = relocBank.getData()[rSym.getOffset()];
-                        String mnemonic = InstructionParser.getMnemonic(opcode).getKey();
+                        String mnemonic = InstructionParser.getInstruction(opcode).getMnemonic();
                         if (
                                 (asmSym.getLength() == 1) &&
                                 (rSym.getAddressingMode() != AddressingMode.Immediate) && (rSym.getAddressingMode() != AddressingMode.Relative) &&
@@ -181,7 +181,7 @@ public class Assembler {
                                 )
                         ) {
                             // get the new addressing mode
-                            int addrMode;
+                            AddressingMode addrMode;
                             if (rSym.getAddressingMode() == AddressingMode.Absolute) {
                                addrMode = AddressingMode.ZeroPage;
                             } else if (rSym.getAddressingMode() == AddressingMode.AbsoluteX) {
@@ -316,28 +316,16 @@ public class Assembler {
 
                     // .org directive
                     switch (directive) {
-                        case ".org":
-                            this.handleOrg(lineData);
-                            break;
-                        case ".db":
-                        case ".byte":
-                            this.defineByte(lineData);
-                            break;
-                        case ".dw":
-                        case ".word":
-                            this.defineWords(lineData);
-                            break;
-                        case ".rsset":
-                            this.handleRSSet(lineData);
-                            break;
-                        case ".rs":
-                            this.reserveBytes(lineData);
-                            break;
-                        case ".macro":
-                            this.createMacro(lineData);
-                            break;
-                        default:
+                        case ".org" -> this.handleOrg(lineData);
+                        case ".db", ".byte" -> this.defineByte(lineData);
+                        case ".dw", ".word" -> this.defineWords(lineData);
+                        case ".rsset" -> this.handleRSSet(lineData);
+                        case ".rs" -> this.reserveBytes(lineData);
+                        case ".macro" -> this.createMacro(lineData);
+                        default -> {
+                            asmScan.close();
                             throw new AssemblerException("Invalid assembler directive", this.lineNumber);
+                        }
                     }
                 }
                 // otherwise, it is a symbol name
@@ -347,13 +335,16 @@ public class Assembler {
                         if (lineData[0].charAt(lineData[0].length() - 1) == ':') {
                             lineData[0] = lineData[0].substring(0, lineData[0].length() - 1);
                         } else {
+                            asmScan.close();
                             throw new AssemblerException("Invalid syntax", this.lineNumber);
                         }
                     } else {
                         if (!lineData[1].equals("=")) {
+                            asmScan.close();
                             throw new AssemblerException("Invalid syntax", this.lineNumber);
                         } else {
                             if (lineData.length > 3) {
+                                asmScan.close();
                                 throw new AssemblerException("Invalid syntax", this.lineNumber);
                             }
                         }
@@ -364,6 +355,7 @@ public class Assembler {
 
                     // check to see if the symbol is already in our table
                     if (this.symbolTable.contains(fullSymName)) {
+                        asmScan.close();
                         throw new AssemblerException("Symbol already in table", this.lineNumber);
                     } else {
                         // add it to the symbol table

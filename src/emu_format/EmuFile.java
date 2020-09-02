@@ -15,10 +15,11 @@ public class EmuFile {
      */
 
     // todo: if file is being used by another process, display in user console?
+    // todo: allow emu files to be written without debug symbols
 
-    private Vector<Bank> prgBanks;
-    private Vector<DebugSymbol> debugSymbols;
-    private Vector<Input> configuredInputs;
+    final private Vector<Bank> prgBanks;
+    final private Vector<DebugSymbol> debugSymbols;
+    final private Vector<Input> configuredInputs;
 
     private final static byte[] MAGIC_NUMBER = { (byte)0xC0, 'E', 'M', 'U' };
     private final static int VERSION = 1;
@@ -32,7 +33,7 @@ public class EmuFile {
     public static EmuFile loadEmuFile(String filename) {
         // Loads the data in .emu file 'filename' and returns the object
         EmuFile em = null;
-        DataInputStream in = null;
+        DataInputStream in;
 
         try {
             in = new DataInputStream(new BufferedInputStream(new FileInputStream(filename)));
@@ -102,9 +103,11 @@ public class EmuFile {
 
                     in.close();
                 } else {
+                    in.close(); // prevent a resource leak
                     throw new Exception("Incompatible .emu file version");
                 }
             } else {
+                in.close(); // prevent a resource leak
                 throw new Exception("Invalid magic number in .emu file");
             }
         }
@@ -119,7 +122,7 @@ public class EmuFile {
     public void writeEmuFile(String filename) {
         // Writes the current EmuFile object to file 'filename'
 
-        DataOutputStream out = null;
+        DataOutputStream out;
 
         try
         {
@@ -201,15 +204,7 @@ public class EmuFile {
         this.configuredInputs = configuredInputs;
     }
 
-    public EmuFile(Vector<Bank> banks) {
-        this(banks, null, null);
-    }
-
     public EmuFile(Vector<Bank> banks, Vector<DebugSymbol> debugSymbols) {
         this(banks, debugSymbols, null);
-    }
-
-    public EmuFile() {
-        this.prgBanks = new Vector<>();
     }
 }
