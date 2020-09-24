@@ -1767,7 +1767,7 @@ public class CPU {
             // This is essentially the implementation of the KIL instruction
             default:
                 // if the instruction isn't in the list, it is illegal
-                throw new Exception("Illegal instruction");
+                throw new Exception(String.format("Illegal instruction $%2x", opcode));
         }
     }
 
