@@ -165,12 +165,18 @@ class InstructionParser {
 
             // We will support parsing decimal integers, but BCD is not supported
             // binary
-            return switch (prefix) {
-                case "#" -> (short) Integer.parseInt(numString, 10);
-                case "#$", "$" -> (short) Integer.parseInt(numString, 16);
-                case "#%", "%" -> (short) Integer.parseInt(numString, 2);
-                default -> throw new Exception("Invalid numeric prefix");
-            };
+            switch (prefix) {
+                case "#":
+                    return (short) Integer.parseInt(numString, 10);
+                case "#$":
+                case "$":
+                    return (short) Integer.parseInt(numString, 16);
+                case "#%":
+                case "%":
+                    return (short) Integer.parseInt(numString, 2);
+                default:
+                    throw new Exception("Invalid numeric prefix");
+            }
         }
     }
 

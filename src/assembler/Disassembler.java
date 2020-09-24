@@ -38,14 +38,15 @@ public class Disassembler {
 
          */
 
-        int len;
+        int len = 0;
 
         // use InstructionParser.getAddressingMode; if the instruction is unknown, it will throw an exception
         try {
             AddressingMode mode = InstructionParser.getAddressingMode(opcode);
-            len = switch(mode) {
+            switch(mode) {
                 case Implied:
-                    yield 1;
+                    len = 1;
+                    break;
                 case ZeroPage:
                 case ZeroPageX:
                 case ZeroPageY:
@@ -53,13 +54,15 @@ public class Disassembler {
                 case Relative:
                 case IndirectX:
                 case IndirectY:
-                    yield 2;
+                    len = 2;
+                    break;
                 case Indirect:
                 case Absolute:
                 case AbsoluteX:
                 case AbsoluteY:
-                    yield 3;
-            };
+                    len = 3;
+                    break;
+            }
         }
         catch (UnknownInstructionException e) {
             // The instruction is unknown

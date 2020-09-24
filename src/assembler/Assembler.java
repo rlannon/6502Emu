@@ -316,13 +316,27 @@ public class Assembler {
 
                     // .org directive
                     switch (directive) {
-                        case ".org" -> this.handleOrg(lineData);
-                        case ".db", ".byte" -> this.defineByte(lineData);
-                        case ".dw", ".word" -> this.defineWords(lineData);
-                        case ".rsset" -> this.handleRSSet(lineData);
-                        case ".rs" -> this.reserveBytes(lineData);
-                        case ".macro" -> this.createMacro(lineData);
-                        default -> {
+                        case ".org":
+                            this.handleOrg(lineData);
+                            break;
+                        case ".db":
+                        case ".byte":
+                            this.defineByte(lineData);
+                            break;
+                        case ".dw":
+                        case ".word":
+                            this.defineWords(lineData);
+                            break;
+                        case ".rsset":
+                            this.handleRSSet(lineData);
+                            break;
+                        case ".rs":
+                            this.reserveBytes(lineData);
+                            break;
+                        case ".macro":
+                            this.createMacro(lineData);
+                            break;
+                        default: {
                             asmScan.close();
                             throw new AssemblerException("Invalid assembler directive", this.lineNumber);
                         }

@@ -12,7 +12,7 @@ public class Emulator {
 
     final private CPU cpu;    // the CPU we are running; automatically creates debugger
     public Debugger debugger;
-    final private Assembler assemble; // the Assembler we are using
+    final private Assembler assembler; // the Assembler we are using
     final private HashMap<String, Input> inputs;   // user inputs; these are configurable
 
     private boolean debugMode;  // whether the emulator is running in debug mode
