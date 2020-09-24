@@ -1620,9 +1620,148 @@ public class CPU {
                 break;
             }
 
-            // todo: RRA - ROR followed by ADC
-            // todo: SLO -- ASL followed by ORA
-            // todo: SRE -- LSR followed by EOR
+            // RRA - ROR followed by ADC
+            // RRA: zp
+            case 0x67: {
+                address = this.fetchImmediateByte() & 0xFF;
+                this.rotateRight(address);
+                this.add(this.memory[address]);
+                break;
+            }
+            case 0x77: {
+                address = (this.fetchImmediateByte() + this.x) & 0xFF;
+                this.rotateRight(address);
+                this.add(this.memory[address]);
+                break;
+            }
+            // absolute
+            case 0x6f: {
+                address = this.fetchImmediateShort() & 0xFFFF;
+                this.rotateRight(address);
+                this.add(this.memory[address]);
+                break;
+            }
+            case 0x7f: {
+                address = (this.fetchImmediateShort() + (this.x & 0xFF)) & 0xFFFF;
+                this.rotateRight(address);
+                this.add(this.memory[address]);
+                break;
+            }
+            case 0x7b: {
+                address = (this.fetchImmediateShort() + (this.y & 0xFF)) & 0xFFFF;
+                this.rotateRight(address);
+                this.add(this.memory[address]);
+                break;
+            }
+            // indirect x
+            case 0x63: {
+                address = this.calculateIndexedIndirectAddress();
+                this.rotateRight(address);
+                this.add(this.memory[address]);
+                break;
+            }
+            // indirect y
+            case 0x73: {
+                address = this.calculateIndirectIndexedAddress();
+                this.rotateRight(address);
+                this.add(this.memory[address]);
+                break;
+            }
+
+            // SLO -- ASL followed by ORA
+            // zp
+            case 0x07: {
+                address = this.fetchImmediateByte() & 0xFF;
+                this.shiftLeft(address);
+                this.or(this.memory[address]);
+                break;
+            }
+            case 0x17: {
+                address = (this.fetchImmediateByte() + this.x) & 0xFF;
+                this.shiftLeft(address);
+                this.or(this.memory[address]);
+                break;
+            }
+            // absolute
+            case 0x0f: {
+                address = this.fetchImmediateShort() & 0xFFFF;
+                this.shiftLeft(address);
+                this.or(this.memory[address]);
+                break;
+            }
+            case 0x1f: {
+                address = (this.fetchImmediateShort() + (this.x & 0xFF)) & 0xFFFF;
+                this.shiftLeft(address);
+                this.or(this.memory[address]);
+                break;
+            }
+            case 0x1b: {
+                address = (this.fetchImmediateShort() + (this.y & 0xFF)) & 0xFFFF;
+                this.shiftLeft(address);
+                this.or(this.memory[address]);
+                break;
+            }
+            // indirect x
+            case 0x03: {
+                address = this.calculateIndexedIndirectAddress();
+                this.shiftLeft(address);
+                this.or(this.memory[address]);
+                break;
+            }
+            // indirect y
+            case 0x13: {
+                address = this.calculateIndirectIndexedAddress();
+                this.shiftLeft(address);
+                this.or(this.memory[address]);
+                break;
+            }
+
+            // SRE -- LSR followed by EOR
+            // zp
+            case 0x47: {
+                address = this.fetchImmediateByte() & 0xFF;
+                this.shiftRight(address);
+                this.xor(this.memory[address]);
+                break;
+            }
+            case 0x57: {
+                address = (this.fetchImmediateByte() + this.x) & 0xFF;
+                this.shiftRight(address);
+                this.xor(this.memory[address]);
+                break;
+            }
+            // absolute
+            case 0x4f: {
+                address = this.fetchImmediateShort() & 0xFFFF;
+                this.shiftRight(address);
+                this.xor(this.memory[address]);
+                break;
+            }
+            case 0x5f: {
+                address = (this.fetchImmediateShort() + (this.x & 0xFF)) & 0xFFFF;
+                this.shiftRight(address);
+                this.xor(this.memory[address]);
+                break;
+            }
+            case 0x5b: {
+                address = (this.fetchImmediateShort() + (this.y & 0xFF)) & 0xFFFF;
+                this.shiftRight(address);
+                this.xor(this.memory[address]);
+                break;
+            }
+            // indirect x
+            case 0x43: {
+                address = this.calculateIndexedIndirectAddress();
+                this.shiftRight(address);
+                this.xor(this.memory[address]);
+                break;
+            }
+            case 0x53: {
+                address = this.calculateIndirectIndexedAddress();
+                this.shiftRight(address);
+                this.xor(this.memory[address]);
+                break;
+            }
 
             // Invalid opcodes will fall through to here
             // This is essentially the implementation of the KIL instruction
