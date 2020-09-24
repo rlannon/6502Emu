@@ -1333,7 +1333,7 @@ public class CPU {
                 this.fetchImmediateByte();  // ignore the value
                 break;
 
-            // we also have a few 3-byte nops
+            // we also have a few 3-byte NOPs
             case 0x0c:
             case 0x1c:
             case 0x3c:
@@ -1452,7 +1452,7 @@ public class CPU {
                 break;
             }
 
-            // todo: DCP -- a DEC followed by CMP (but with more addressing modes)
+            // DCP -- a DEC followed by CMP (but with more addressing modes)
             // DCP: zp
             case 0xc7:
             // DCP: zp,x
@@ -1496,13 +1496,136 @@ public class CPU {
                 break;
             }
 
-            // todo: ISC -- an INC followed by SBC (but with more addressing modes)
-            // todo: RLA -- ROL followed by AND
+            // ISC -- an INC followed by a SBC
+            // ISC: zp
+            case 0xe7: {
+                // perform INC (zp)
+                byte zp_address = fetchImmediateByte();
+                address = (int)zp_address & 0xFF;
+                this.memory[address] += 1;
+
+                // perform SBC
+                operand = this.memory[address];
+                this.subtract(operand & 0xFF);
+                break;
+            }
+            // ISC: zp, x
+            case 0xf7: {
+                // perform INC (zp,x)
+                byte zp_address = fetchImmediateByte();
+                address = (zp_address + this.x) & 0xFF;
+                this.memory[address] += 1;
+
+                // perform SBC
+                operand = this.memory[address];
+                this.subtract(operand & 0xFF);
+                break;
+            }
+            // ISC: abs
+            case 0xef: {
+                // perform INC
+                address = this.fetchImmediateShort() & 0xFFFF;
+                this.memory[address] += 1;
+
+                // perform SBC
+                operand = this.memory[address];
+                this.subtract(operand & 0xFF);
+                break;
+            }
+            // ISC: abs, x
+            case 0xff: {
+                address = this.fetchImmediateShort() & 0xFFFF;
+                address += (this.x & 0xFF);
+                this.memory[address] += 1;
+
+                operand = this.memory[address];
+                this.subtract(operand);
+                break;
+            }
+            // ISC: abs, y
+            case 0xfb: {
+                address = this.fetchImmediateShort() & 0xFFFF;
+                address += (this.y & 0xFF);
+                this.memory[address] += 1;
+
+                operand = this.memory[address];
+                this.subtract(operand);
+                break;
+            }
+            // ISC: (d, x)
+            case 0xe3: {
+                address = this.calculateIndexedIndirectAddress();
+                this.memory[address] += 1;
+                operand = this.memory[address];
+                this.subtract(operand);
+                break;
+            }
+            // ISC: (d), y
+            case 0xf3: {
+                address = this.calculateIndirectIndexedAddress();
+                this.memory[address] += 1;
+                operand = this.memory[address];
+                this.subtract(operand);
+                break;
+            }
+
+            // RLA -- ROL followed by AND
+            // RLA: zp
+            case 0x27: {
+                address = this.fetchImmediateByte() & 0xFF;
+                this.rotateLeft(address);
+                this.and(this.memory[address]);
+                break;
+            }
+            // RLA: zp,x
+            case 0x37: {
+                address = (this.fetchImmediateByte() + this.x) & 0xFF;
+                this.rotateLeft(address);
+                this.and(this.memory[address]);
+                break;
+            }
+            // RLA: absolute
+            case 0x2f: {
+                address = this.fetchImmediateShort() & 0xFFFF;
+                this.rotateLeft(address);
+                this.and(this.memory[address]);
+                break;
+            }
+            // RLA: absolute x
+            case 0x3f: {
+                address = (this.fetchImmediateShort() + (this.x & 0xFF)) & 0xFFFF;
+                this.rotateLeft(address);
+                this.and(this.memory[address]);
+                break;
+            }
+            // RLA: absolute y
+            case 0x3b: {
+                address = (this.fetchImmediateShort() + (this.y & 0xFF)) & 0xFFFF;
+                this.rotateLeft(address);
+                this.and(this.memory[address]);
+                break;
+            }
+            // RLA: (d,x)
+            case 0x23: {
+                address = this.calculateIndexedIndirectAddress();
+                this.rotateLeft(address);
+                this.and(this.memory[address]);
+                break;
+            }
+            // RLA: (d),y
+            case 0x33: {
+                address = this.calculateIndirectIndexedAddress();
+                this.rotateLeft(address);
+                this.and(this.memory[address]);
+                break;
+            }
+
             // todo: RRA - ROR followed by ADC
             // todo: SLO -- ASL followed by ORA
             // todo: SRE -- LSR followed by EOR
 
             // Invalid opcodes will fall through to here
+            // This is essentially the implementation of the KIL instruction
             default:
                 // if the instruction isn't in the list, it is illegal
                 throw new Exception("Illegal instruction");
